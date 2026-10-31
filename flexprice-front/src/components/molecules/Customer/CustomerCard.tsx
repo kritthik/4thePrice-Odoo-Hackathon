@@ -1,0 +1,96 @@
+import { FormHeader } from '@/components/atoms';
+import { SubscriptionUsage } from '@/models/Subscription';
+import CustomerApi from '@/api/CustomerApi';
+import formatDate from '@/utils/common/format_date';
+import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+
+const fetchCustomer = async (customerId: string) => {
+	return await CustomerApi.getCustomerById(customerId);
+};
+
+interface CustomerCardProps {
+	customerId: string;
+	subscriptionData?: SubscriptionUsage | null;
+}
+
+const CustomerCard: React.FC<CustomerCardProps> = ({ customerId, subscriptionData }) => {
+	const { t } = useTranslation('customers');
+	const emptyDisplay = t('usageTable.fallback');
+	const { data: customer, isLoading } = useQuery({
+		queryKey: ['fetchCustomerCard', customerId],
+		queryFn: () => fetchCustomer(customerId),
+
+		// staleTime: 1000 * 60 * 5,
+	});
+
+	const details = [
+		{
+			label: t('list.columns.name'),
+			value: customer?.name || emptyDisplay,
+		},
+
+		{
+			label: t('overview.labels.email'),
+			value: customer?.email || emptyDisplay,
+		},
+
+		{
+			label: t('overview.customerCardSlug'),
+			value: customer?.external_id || emptyDisplay,
+		},
+	];
+
+	// Loading Skeleton
+	if (isLoading) {
+		return (
+			<div className='flex items-center justify-center'>
+				<div className='py-6 px-4 rounded-xl border border-line-strong'>
+					<div className='h-6 w-32 bg-surface-strong rounded animate-pulse mb-4'></div>
+					<div className='flex items-start space-x-3'>
+						<div className='w-10 h-10 bg-surface-strong rounded-full animate-pulse'></div>
+						<div className='flex flex-col space-y-2 flex-1'>
+							<div className='h-5 w-32 bg-surface-strong rounded animate-pulse'></div>
+							<div className='h-4 w-48 bg-surface-strong rounded animate-pulse'></div>
+							<div className='h-4 w-24 bg-surface-strong rounded animate-pulse'></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	// Customer Details
+	return (
+		<div className='items-center justify-center'>
+			<div className='card bg-surface'>
+				<FormHeader title={t('overview.cardTitle')} variant='sub-header' />
+				<div className='flex items-center space-x-4'>
+					<div className='w-full space-y-4'>
+						{details.map((detail, index) => (
+							<div key={index} className='grid grid-cols-2 gap-4'>
+								<div className='text-sm font-light text-content-tertiary'>{detail.label}</div>
+								<div className='text-sm font-normal text-content-heading text-end'>{detail.value || emptyDisplay}</div>
+							</div>
+						))}
+						<div className='grid grid-cols-2 gap-4'>
+							{subscriptionData && (
+								<>
+									<div className='text-sm font-light text-content-tertiary'>{t('overview.labels.subscriptionAmount')}</div>
+									<div className='text-sm font-normal text-content-heading text-end'>{subscriptionData.display_amount || emptyDisplay}</div>
+
+									<div className='text-sm font-light text-content-tertiary'>{t('overview.labels.subscriptionStartDate')}</div>
+									<div className='text-sm font-normal text-content-heading text-end'>
+										{formatDate(subscriptionData.start_time.toString()) || emptyDisplay}
+									</div>
+								</>
+							)}
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+};
+
+export default CustomerCard;

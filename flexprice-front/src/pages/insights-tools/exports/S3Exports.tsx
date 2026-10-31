@@ -1,0 +1,239 @@
+import { FormHeader, Loader, Page, Button, Tooltip } from '@/components/atoms';
+import { useCurrentUserPermissions } from '@/hooks/useCurrentUserPermissions';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
+import { ArrowLeft, Plus, Settings, Trash2, Eye, BarChart3 } from 'lucide-react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { ConnectionApi, TaskApi } from '@/api';
+import { ENTITY_STATUS, CONNECTION_PROVIDER_TYPE } from '@/models';
+import toast from 'react-hot-toast';
+import S3ConnectionDrawer from '@/components/molecules/S3ConnectionDrawer/S3ConnectionDrawer';
+import { ApiDocsContent } from '@/components/molecules';
+import { API_DOCS_TAGS } from '@/constants/apiDocsTags';
+
+const S3Exports = () => {
+	const { t } = useTranslation('settings');
+	const { i18n } = useTranslation();
+	const navigate = useNavigate();
+	const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+	const { can } = useCurrentUserPermissions();
+	const canWriteConnection = can('connection', 'write');
+
+	// Fetch S3 connections
+	const {
+		data: connectionsResponse,
+		refetch: refetchConnections,
+		isLoading,
+	} = useQuery({
+		queryKey: ['connections', 's3'],
+		queryFn: () => ConnectionApi.List({ provider_type: CONNECTION_PROVIDER_TYPE.S3 }),
+	});
+
+	const connections = connectionsResponse?.connections || [];
+
+	// Fetch export counts for each connection
+	const { data: exportCounts } = useQuery({
+		queryKey: ['export-counts', connections.map((c) => c.id)],
+		queryFn: async () => {
+			const counts: Record<string, number> = {};
+			await Promise.all(
+				connections.map(async (connection) => {
+					try {
+						const response = await TaskApi.getAllScheduledTasks({
+							connection_id: connection.id,
+						});
+						// Filter out deleted tasks
+						const activeTasks = response.items.filter((task) => task.status !== ENTITY_STATUS.DELETED);
+						counts[connection.id] = activeTasks.length;
+					} catch {
+						counts[connection.id] = 0;
+					}
+				}),
+			);
+			return counts;
+		},
+		enabled: connections.length > 0,
+	});
+
+	// Delete connection mutation
+	const { mutate: deleteConnection, isPending: isDeletingConnection } = useMutation({
+		mutationFn: (id: string) => ConnectionApi.Delete(id),
+		onSuccess: () => {
+			toast.success('Connection deleted successfully');
+			refetchConnections();
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || 'Failed to delete connection');
+		},
+	});
+
+	const handleSaveConnection = () => {
+		refetchConnections();
+	};
+
+	const handleDeleteConnection = (id: string, name: string) => {
+		if (window.confirm(`Are you sure you want to delete the connection "${name}"?`)) {
+			deleteConnection(id);
+		}
+	};
+
+	const handleViewExports = (connectionId: string) => {
+		navigate(`/tools/exports/s3/${connectionId}/export`);
+	};
+
+	if (isLoading) {
+		return <Loader />;
+	}
+
+	return (
+		<Page heading={t('insightsTools.exports.s3PageHeading')}>
+			<ApiDocsContent tags={API_DOCS_TAGS.Tasks} />
+
+			{/* Back button and Add Connection Button */}
+			<div className='mb-6 flex items-center justify-between'>
+				<Button variant='outline' onClick={() => navigate('/tools/exports')} className='flex items-center gap-2'>
+					<ArrowLeft className='w-4 h-4' />
+					{t('insightsTools.exports.backToExports')}
+				</Button>
+				{canWriteConnection ? (
+					<Button
+						onClick={() => {
+							setIsDrawerOpen(true);
+						}}
+						className='flex items-center gap-2'>
+						<Plus className='w-4 h-4' />
+						{i18n.t('actions.add', { ns: 'common' })}
+					</Button>
+				) : (
+					<Tooltip content={t('insightsTools.integrations.writeDeniedTooltip')}>
+						<span tabIndex={0} className='inline-block'>
+							<Button disabled className='flex items-center gap-2'>
+								<Plus className='w-4 h-4' />
+								{i18n.t('actions.add', { ns: 'common' })}
+							</Button>
+						</span>
+					</Tooltip>
+				)}
+			</div>
+
+			{/* Connections List */}
+			{connections.length > 0 ? (
+				<div className='mb-8'>
+					<FormHeader variant='form-component-title' title={t('insightsTools.exports.connectionsTitle')} />
+					<div className='card'>
+						{connections.map((connection, idx) => (
+							<div key={idx} className='flex items-center justify-between text-sm p-4 border-b last:border-b-0'>
+								<div className='flex-1'>
+									<div className='flex items-center gap-3'>
+										<div className='w-10 h-10 bg-accent-orange-muted rounded-lg flex items-center justify-center'>
+											<Settings className='w-5 h-5 text-accent-orange' />
+										</div>
+										<div>
+											<p className='text-content font-medium'>{connection.name}</p>
+											<p className='text-xs text-content-muted capitalize'>
+												{connection.connection_status} • {t('insightsTools.exports.providerS3Suffix')}
+											</p>
+										</div>
+									</div>
+								</div>
+								<div className='flex items-center gap-10'>
+									{/* Export Count */}
+									<div className='flex items-center gap-2 text-sm text-content-tertiary'>
+										<BarChart3 className='w-4 h-4' />
+										<span>
+											{(exportCounts?.[connection.id] ?? 0) === 1
+												? t('insightsTools.exports.exportCountSingular', { count: 1 })
+												: t('insightsTools.exports.exportCountPlural', { count: exportCounts?.[connection.id] ?? 0 })}
+										</span>
+									</div>
+									{/* Action Buttons */}
+									<div className='flex items-center gap-2'>
+										<Button
+											variant='outline'
+											size='sm'
+											onClick={() => handleViewExports(connection.id)}
+											className='flex items-center gap-1'>
+											<Eye className='w-3 h-3' />
+											{t('insightsTools.exports.viewExports')}
+										</Button>
+										<Button
+											variant='outline'
+											size='icon'
+											onClick={() => handleDeleteConnection(connection.id, connection.name)}
+											disabled={isDeletingConnection || !canWriteConnection}
+											isLoading={isDeletingConnection}>
+											<Trash2 className='size-4' />
+										</Button>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			) : (
+				<div className='card text-center !py-12'>
+					<div className='text-content-muted mb-4'>
+						<h3 className='text-lg font-medium text-content mb-2'>{t('insightsTools.exports.noS3Connections')}</h3>
+						<p className='text-content-muted mb-6'>{t('insightsTools.exports.noS3ConnectionsHint')}</p>
+						{canWriteConnection ? (
+							<Button
+								variant='outline'
+								onClick={() => {
+									setIsDrawerOpen(true);
+								}}
+								className='flex items-center gap-2 mx-auto'>
+								<Plus className='w-4 h-4' />
+								{t('insightsTools.exports.addS3Connection')}
+							</Button>
+						) : (
+							<Tooltip content={t('insightsTools.integrations.writeDeniedTooltip')}>
+								<span tabIndex={0} className='inline-block'>
+									<Button disabled variant='outline' className='flex items-center gap-2 mx-auto'>
+										<Plus className='w-4 h-4' />
+										{t('insightsTools.exports.addS3Connection')}
+									</Button>
+								</span>
+							</Tooltip>
+						)}
+					</div>
+				</div>
+			)}
+
+			{/* Overview Section */}
+			<div className='card space-y-6 mt-8'>
+				<h3 className='text-xl font-semibold text-content'>{t('insightsTools.exports.s3FeaturesTitle')}</h3>
+				<div className='space-y-4'>
+					<div>
+						<h4 className='text-sm font-semibold text-content mb-1'>{t('insightsTools.exports.s3FeatureDataExportTitle')}</h4>
+						<p className='text-xs text-content-tertiary'>{t('insightsTools.exports.s3FeatureDataExportBody')}</p>
+					</div>
+					<div>
+						<h4 className='text-sm font-semibold text-content mb-1'>{t('insightsTools.exports.s3FeatureSchedulingTitle')}</h4>
+						<p className='text-xs text-content-tertiary'>{t('insightsTools.exports.s3FeatureSchedulingBody')}</p>
+					</div>
+					<div>
+						<h4 className='text-sm font-semibold text-content mb-1'>{t('insightsTools.exports.s3FeatureSecureTitle')}</h4>
+						<p className='text-xs text-content-tertiary'>{t('insightsTools.exports.s3FeatureSecureBody')}</p>
+					</div>
+					<div>
+						<h4 className='text-sm font-semibold text-content mb-1'>{t('insightsTools.exports.s3FeatureFormatsTitle')}</h4>
+						<p className='text-xs text-content-tertiary'>{t('insightsTools.exports.s3FeatureFormatsBody')}</p>
+					</div>
+				</div>
+			</div>
+
+			{/* S3 Connection Drawer */}
+			<S3ConnectionDrawer
+				isOpen={isDrawerOpen}
+				onOpenChange={(open) => {
+					setIsDrawerOpen(open);
+				}}
+				connection={null}
+				onSave={handleSaveConnection}
+			/>
+		</Page>
+	);
+};
+
+export default S3Exports;

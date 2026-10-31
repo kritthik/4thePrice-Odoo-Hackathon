@@ -1,0 +1,204 @@
+import supabase from '@/core/services/supbase/config';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import { useNavigate, useSearchParams } from 'react-router';
+import { useUser } from '@/hooks/UserContext';
+import { Button, Input } from '@/components/atoms';
+import { EyeIcon, EyeOff } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import AuthApi from '@/api/AuthApi';
+import { config, APP_ENV } from '@/config/config';
+import { RouteNames } from '@/core/routes/Routes';
+import GoogleSignin from './GoogleSignin';
+import SamlSignin, { SSO_TENANT_PARAM, resolveSsoTenantId } from './SamlSignin';
+import { AuthTab } from './authTabs';
+import { sanitizeRedirect } from './safeRedirect';
+import { stripCredentialParams } from './credentialParams';
+import { useTranslation } from 'react-i18next';
+
+interface LoginFormProps {
+	switchTab: (tab: AuthTab) => void;
+}
+
+const LoginForm: React.FC<LoginFormProps> = ({ switchTab }) => {
+	const { t } = useTranslation('auth');
+	const navigate = useNavigate();
+	const [searchParams, setSearchParams] = useSearchParams();
+	const userContext = useUser();
+	const [email, setEmail] = useState('');
+	const [password, setPassword] = useState('');
+	const [showPassword, setShowPassword] = useState(false);
+	const [loading, setLoading] = useState(false);
+	// Read straight from the URL rather than held in state: the prefill effect
+	// below rewrites the query string, and a stale copy would make the SSO button
+	// disappear mid-visit.
+	const ssoTenantId = resolveSsoTenantId(searchParams.get(SSO_TENANT_PARAM), import.meta.env.VITE_SSO_TENANT_ID as string | undefined);
+
+	// Credentials are never read from the URL. This only scrubs them.
+	//
+	// The login page used to prefill itself from email and password query
+	// parameters, which is
+	// what made the removed "login link" work. Links already sent cannot be
+	// recalled, so one can still arrive — it now signs nobody in, and the
+	// password is replaced out of the address bar so it stops being carried in
+	// `Referer` headers and left behind in history. See credentialParams.ts.
+	useEffect(() => {
+		const cleaned = stripCredentialParams(searchParams.toString());
+		if (cleaned === null) return;
+		setSearchParams(new URLSearchParams(cleaned), { replace: true });
+	}, [searchParams, setSearchParams]);
+
+	const { mutate: localLogin } = useMutation({
+		mutationFn: async () => {
+			return await AuthApi.Login(email, password);
+		},
+		onSuccess: (data) => {
+			// Store token in a consistent format
+			const tokenData = {
+				token: data.token,
+				user_id: data.user_id,
+				tenant_id: data.tenant_id,
+			};
+			localStorage.setItem('token', JSON.stringify(tokenData));
+			navigate(RouteNames.home);
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || 'Something went wrong. Please try again.');
+		},
+		// Runs after either outcome — a failed self-hosted login otherwise left the button
+		// disabled forever, since neither onSuccess nor onError reset `loading`.
+		onSettled: () => setLoading(false),
+	});
+
+	const handleLogin = async () => {
+		if (!email || !password) {
+			toast.error('Please enter both email and password');
+			return;
+		}
+
+		setLoading(true);
+
+		if (config.app.env !== APP_ENV.SelfHosted) {
+			try {
+				const { data: authData, error } = await supabase.auth.signInWithPassword({
+					email,
+					password,
+				});
+
+				if (error) {
+					toast.error(error.message);
+					return;
+				}
+
+				userContext.setUser(authData.user);
+				// A page that needs a session sends the user here with the way back.
+				navigate(sanitizeRedirect(searchParams.get('redirect')) ?? '/');
+				toast.success('Login successful');
+			} catch (error) {
+				// Belt-and-suspenders: a thrown error here (e.g. a misconfigured auth client)
+				// must still surface and release the button, not just leave it disabled.
+				toast.error(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+			} finally {
+				setLoading(false);
+			}
+		} else {
+			localLogin();
+		}
+	};
+
+	return (
+		<>
+			<form className='space-y-5'>
+				<Input
+					id='email'
+					name='email'
+					type='email'
+					autoComplete='username'
+					label={t('fields.email')}
+					placeholder={t('fields.emailPlaceholder')}
+					required
+					onChange={(s) => setEmail(s)}
+					value={email}
+				/>
+
+				<div>
+					<div className='flex justify-between items-center mb-1'>
+						<label htmlFor='password' className='block text-sm font-medium text-content-secondary'>
+							{t('fields.password')}
+						</label>
+						{/* Self-hosted has no email, so only an admin can start a reset. */}
+						{config.app.env !== APP_ENV.SelfHosted && (
+							<button type='button' onClick={() => switchTab(AuthTab.FORGOT_PASSWORD)} className='text-sm text-grey-600 hover:underline'>
+								{t('links.forgotPassword')}
+							</button>
+						)}
+					</div>
+					<Input
+						id='password'
+						name='password'
+						autoComplete='current-password'
+						type={showPassword ? 'text' : 'password'}
+						suffix={
+							<span onClick={() => setShowPassword(!showPassword)} className='cursor-pointer'>
+								{showPassword ? <EyeIcon className='w-5 h-5' /> : <EyeOff className='w-5 h-5' />}
+							</span>
+						}
+						placeholder={t('fields.passwordPlaceholder')}
+						required
+						onChange={(s) => setPassword(s)}
+						value={password}
+					/>
+					{config.app.env === APP_ENV.SelfHosted && <p className='mt-1.5 text-xs text-content-muted'>{t('links.askAdmin')}</p>}
+				</div>
+				<Button onClick={handleLogin} className='w-full !mt-6 h-11' isLoading={loading}>
+					{t('buttons.login')}
+				</Button>
+			</form>
+
+			{/* Google Sign-in Button - Only show on login and signup tabs */}
+			{config.app.env !== APP_ENV.SelfHosted && (
+				<>
+					<div className='flex items-center justify-center my-6'>
+						<div className='flex-1 h-px bg-surface-strong'></div>
+						<span className='mx-4 text-sm text-content-muted'>{t('divider')}</span>
+						<div className='flex-1 h-px bg-surface-strong'></div>
+					</div>
+					<GoogleSignin />
+				</>
+			)}
+
+			{/* SAML single sign-on. Shown only when the link names a tenant: SSO is
+			    configured per tenant, so without one there is no identity provider
+			    to send the browser to, and an always-visible button would fail for
+			    everyone who arrived at /login directly.
+
+			    Deliberately not restricted by environment. SAML is a per-tenant
+			    feature, so a hosted deployment backed by Supabase may still serve
+			    tenants that sign in through an identity provider; gating the button
+			    on the deployment hid SSO from every such tenant. The button is
+			    still safe to offer on a tenant that has not set SSO up: SamlSignin
+			    asks the endpoint first and reports it as unavailable on a 404. */}
+			{ssoTenantId && (
+				<>
+					<div className='flex items-center justify-center my-6'>
+						<div className='flex-1 h-px bg-surface-strong'></div>
+						<span className='mx-4 text-sm text-content-muted'>{t('divider')}</span>
+						<div className='flex-1 h-px bg-surface-strong'></div>
+					</div>
+					<SamlSignin tenantId={ssoTenantId} />
+				</>
+			)}
+
+			{config.platform.signup.enabled && (
+				<p className='mt-6 text-center text-sm text-content-tertiary'>
+					{t('noAccount')}{' '}
+					<button onClick={() => switchTab(AuthTab.SIGNUP)} className='text-grey-600 underline font-medium'>
+						{t('links.signUp')}
+					</button>
+				</p>
+			)}
+		</>
+	);
+};
+
+export default LoginForm;

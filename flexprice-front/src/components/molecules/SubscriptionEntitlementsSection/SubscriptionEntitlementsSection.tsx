@@ -1,0 +1,756 @@
+import { FC, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { Plus, Trash2, Pencil, Info } from 'lucide-react';
+import { Button, Card, CardHeader, Chip, Dialog, NoDataCard, Sheet } from '@/components/atoms';
+import { FlexpriceTable, ColumnData, AddEntitlementDrawer, EditSubscriptionEntitlementDrawer } from '@/components/molecules';
+import JsonCodeBlock from '@/components/molecules/Events/JsonCodeBlock';
+import {
+	formatAggregatedAllowance,
+	formatAllowanceValue,
+	formatAllowanceReset,
+	formatGrantPeriod,
+} from '@/utils/entitlement/allowanceLabel';
+import type { SubscriptionEntitlementEffective } from '@/types/dto/Subscription';
+import SubscriptionApi from '@/api/SubscriptionApi';
+import EntitlementApi from '@/api/EntitlementApi';
+import { FEATURE_TYPE } from '@/models/Feature';
+import { ENTITLEMENT_ENTITY_TYPE, ENTITLEMENT_GRANT_MEASURE, type Entitlement } from '@/models/Entitlement';
+import { formatCurrency } from '@/constants/common';
+import SubscriptionEntitlementGrantDialog from './SubscriptionEntitlementGrantDialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
+import { BsThreeDots } from 'react-icons/bs';
+import toast from 'react-hot-toast';
+import { DataType, FilterOperator } from '@/types/common/QueryBuilder';
+import { ENTITY_STATUS, EXPAND } from '@/models';
+import { generateExpandQueryParams } from '@/utils/common/api_helper';
+import {
+	EnrichedSubscriptionEntitlement,
+	enrichSubscriptionEntitlements,
+	getPrimarySourceLabel,
+	getEffectiveStaticValue,
+	getEffectiveConfigValue,
+} from '@/utils/subscription/subscriptionEntitlementHelpers';
+import { JsonObject } from '@/types/common';
+import { useCurrentUserPermissions } from '@/hooks/useCurrentUserPermissions';
+
+/** A subscription entitlement grant shown as a row: a dollar allowance over every usage line. */
+interface SubscriptionEntitlementGrantRow {
+	rowType: 'subscription_entitlement_grant';
+	grant: Entitlement;
+}
+
+type EntitlementRow = EnrichedSubscriptionEntitlement | SubscriptionEntitlementGrantRow;
+
+const isGrantRow = (row: EntitlementRow): row is SubscriptionEntitlementGrantRow =>
+	'rowType' in row && row.rowType === 'subscription_entitlement_grant';
+
+interface SubscriptionEntitlementsSectionProps {
+	subscriptionId: string;
+	/** Subscription currency, for subscription entitlement grant amounts. */
+	currency?: string;
+	/** When true, add and delete entitlement actions are disabled. */
+	readOnly?: boolean;
+}
+
+const SubscriptionEntitlementsSection: FC<SubscriptionEntitlementsSectionProps> = ({
+	subscriptionId,
+	currency = 'usd',
+	readOnly = false,
+}) => {
+	const { t: tc } = useTranslation('common');
+	const { t } = useTranslation('catalog');
+	const { can } = useCurrentUserPermissions();
+	const canWriteEntitlement = can('entitlement', 'write');
+	const [addDrawerOpen, setAddDrawerOpen] = useState(false);
+	const [grantDialogOpen, setGrantDialogOpen] = useState(false);
+	const [grantToEdit, setGrantToEdit] = useState<Entitlement | null>(null);
+	const [grantToDelete, setGrantToDelete] = useState<Entitlement | null>(null);
+	const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+	const [selectedEntitlement, setSelectedEntitlement] = useState<EnrichedSubscriptionEntitlement | null>(null);
+	const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+	const [entitlementToDelete, setEntitlementToDelete] = useState<EnrichedSubscriptionEntitlement | null>(null);
+	const [configSheet, setConfigSheet] = useState<{ open: boolean; name: string; value: JsonObject | null }>({
+		open: false,
+		name: '',
+		value: null,
+	});
+	const queryClient = useQueryClient();
+
+	const invalidateEntitlements = () => {
+		queryClient.invalidateQueries({ queryKey: ['subscriptionEntitlements', subscriptionId] });
+		queryClient.invalidateQueries({ queryKey: ['subscriptionRawEntitlements', subscriptionId] });
+	};
+
+	const {
+		data: entitlementsData,
+		isLoading,
+		isError,
+	} = useQuery({
+		queryKey: ['subscriptionEntitlements', subscriptionId],
+		queryFn: async () => {
+			try {
+				return await SubscriptionApi.getSubscriptionEntitlements(subscriptionId);
+			} catch (error) {
+				console.error('Failed to fetch subscription entitlements:', error);
+				return { features: [], subscription_id: subscriptionId, plan_id: '' };
+			}
+		},
+		enabled: !!subscriptionId,
+		retry: false,
+		refetchOnWindowFocus: false,
+	});
+
+	const planId = entitlementsData?.plan_id;
+
+	const { data: rawSubscriptionEntitlements } = useQuery({
+		queryKey: ['subscriptionRawEntitlements', subscriptionId],
+		queryFn: async () => {
+			try {
+				return await EntitlementApi.search({
+					entity_type: ENTITLEMENT_ENTITY_TYPE.SUBSCRIPTION,
+					entity_ids: [subscriptionId],
+					filters: [
+						{
+							field: 'status',
+							operator: FilterOperator.EQUAL,
+							data_type: DataType.STRING,
+							value: { string: ENTITY_STATUS.PUBLISHED },
+						},
+					],
+					expand: generateExpandQueryParams([EXPAND.FEATURES]),
+					limit: 1000,
+					offset: 0,
+				});
+			} catch (error) {
+				console.error('Failed to fetch raw subscription entitlements:', error);
+				return { items: [] };
+			}
+		},
+		enabled: !!subscriptionId,
+		retry: false,
+		refetchOnWindowFocus: false,
+	});
+
+	const { data: planEntitlements } = useQuery({
+		queryKey: ['planEntitlements', planId],
+		queryFn: async () => {
+			if (!planId) return { items: [] };
+			try {
+				return await EntitlementApi.search({
+					filters: [
+						{
+							field: 'entity_type',
+							operator: FilterOperator.EQUAL,
+							data_type: DataType.STRING,
+							value: { string: ENTITLEMENT_ENTITY_TYPE.PLAN },
+						},
+						{
+							field: 'entity_id',
+							operator: FilterOperator.EQUAL,
+							data_type: DataType.STRING,
+							value: { string: planId },
+						},
+						{
+							field: 'status',
+							operator: FilterOperator.EQUAL,
+							data_type: DataType.STRING,
+							value: { string: ENTITY_STATUS.PUBLISHED },
+						},
+					],
+					expand: generateExpandQueryParams([EXPAND.FEATURES]),
+					limit: 1000,
+					offset: 0,
+				});
+			} catch (error) {
+				console.error('Failed to fetch plan entitlements:', error);
+				return { items: [] };
+			}
+		},
+		enabled: !!planId,
+		retry: false,
+		refetchOnWindowFocus: false,
+	});
+
+	const entitlements = useMemo(
+		() =>
+			enrichSubscriptionEntitlements(
+				entitlementsData?.features ?? [],
+				rawSubscriptionEntitlements?.items ?? [],
+				planEntitlements?.items ?? [],
+			),
+		[entitlementsData?.features, rawSubscriptionEntitlements?.items, planEntitlements?.items],
+	);
+
+	const grantRows = useMemo<SubscriptionEntitlementGrantRow[]>(
+		() =>
+			(entitlementsData?.subscription_entitlement_grants?.entitlements ?? []).map((grant) => ({
+				rowType: 'subscription_entitlement_grant' as const,
+				grant,
+			})),
+		[entitlementsData?.subscription_entitlement_grants],
+	);
+
+	const rows: EntitlementRow[] = [...grantRows, ...entitlements];
+
+	const money = (value?: string | null) => formatCurrency(value ?? '0', currency);
+
+	const { mutate: deleteGrant, isPending: isDeletingGrant } = useMutation({
+		mutationFn: async (id: string) => await EntitlementApi.delete(id),
+		onSuccess: () => {
+			toast.success(t('entitlements.subscriptionEntitlementGrants.deleteSuccess'));
+			setGrantToDelete(null);
+			invalidateEntitlements();
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || t('entitlements.subscriptionEntitlementGrants.deleteFailed'));
+		},
+	});
+
+	const openGrantDialog = (grant: Entitlement | null) => {
+		setDropdownOpen(null);
+		setGrantToEdit(grant);
+		setGrantDialogOpen(true);
+	};
+
+	const { mutate: deleteEntitlement, isPending: isDeletingEntitlement } = useMutation({
+		mutationFn: async (entitlementId: string) => {
+			return await EntitlementApi.delete(entitlementId);
+		},
+		onSuccess: () => {
+			toast.success(t('entitlements.subscriptionEdit.deleteSuccess'));
+			invalidateEntitlements();
+			setIsDeleteDialogOpen(false);
+			setEntitlementToDelete(null);
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || t('entitlements.subscriptionEdit.deleteFailed'));
+		},
+	});
+
+	const formatUsageLimit = (value: number | null | undefined) =>
+		value === null || value === undefined ? t('entitlements.overridesTable.unlimited') : String(value.toLocaleString());
+
+	const getFeatureTypeChip = (featureType: string) => {
+		const type = featureType?.toLowerCase();
+		switch (type) {
+			case 'metered':
+				return <Chip label={tc('labels.metered')} variant='info' />;
+			case 'boolean':
+				return <Chip label={tc('labels.boolean')} variant='success' />;
+			case 'static':
+				return <Chip label={tc('labels.static')} variant='warning' />;
+			case 'config':
+				return <Chip label={tc('labels.config')} variant='default' />;
+			default:
+				return <Chip label={featureType} variant='info' />;
+		}
+	};
+
+	const getSourceLabel = (row: EnrichedSubscriptionEntitlement) => {
+		if (row.isOverrideOfParent) {
+			return t('entitlements.subscriptionEdit.sourceOverride');
+		}
+		if (row.hasSubscriptionOverride && !row.isOverrideOfParent) {
+			return t('entitlements.subscriptionEdit.sourceSubscription');
+		}
+		const source = getPrimarySourceLabel(row.sources);
+		const sourceKeys: Record<string, string> = {
+			plan: 'entitlements.subscriptionEdit.sourcePlan',
+			addon: 'entitlements.subscriptionEdit.sourceAddon',
+			subscription: 'entitlements.subscriptionEdit.sourceSubscription',
+		};
+		return t(sourceKeys[source] ?? 'entitlements.subscriptionEdit.sourcePlan');
+	};
+
+	/** "1,000 calls / hour" for either shape, so a cadence change shows too. */
+	const describeAggregated = (e?: Partial<Entitlement> | SubscriptionEntitlementEffective) => {
+		if (!e) return undefined;
+		const value = formatAllowanceValue(e as Partial<Entitlement>, t);
+		const reset = formatAllowanceReset(e as Partial<Entitlement>, t);
+		return reset && reset !== '--' ? `${value} / ${reset}` : value;
+	};
+
+	const getEntitlementValue = (row: EnrichedSubscriptionEntitlement) => {
+		const featureType = row.feature_type;
+		const entitlementData = row.entitlement;
+
+		if (featureType === FEATURE_TYPE.METERED) {
+			const limit = entitlementData?.usage_limit;
+			const originalLimit = row.originalUsageLimit;
+			// Grant-backed features carry no usage_limit, so reading it alone printed
+			// "unlimited" for every allowance.
+			const { value, reset } = formatAggregatedAllowance(entitlementData, t);
+			const valueText = reset && reset !== '--' ? `${value} / ${reset}` : value;
+
+			// Grant-backed rows carry no usage_limit on either side, so the legacy
+			// comparison never fires and the tooltip would read "Unlimited → Unlimited".
+			const isGrant = Boolean(entitlementData?.grant_duration_unit || entitlementData?.grant_quota != null);
+			const originalText = row.originalGrant ? describeAggregated(row.originalGrant) : undefined;
+			const currentText = describeAggregated(entitlementData);
+			const hasChangedValue = isGrant
+				? row.isOverrideOfParent && originalText != null && originalText !== currentText
+				: row.isOverrideOfParent && limit !== originalLimit;
+
+			return (
+				<div className='flex items-center gap-2'>
+					<span>{valueText}</span>
+					{hasChangedValue && (
+						<TooltipProvider delayDuration={0}>
+							<Tooltip>
+								<TooltipTrigger>
+									<Info className='h-4 w-4 text-accent-orange hover:text-accent-orange transition-colors duration-150' />
+								</TooltipTrigger>
+								<TooltipContent
+									sideOffset={5}
+									className='bg-surface border border-line shadow-lg text-sm text-content px-4 py-3 rounded-[6px] max-w-[300px]'>
+									<div className='space-y-2'>
+										<div className='font-medium text-content'>{t('entitlements.overridesTable.overrideAppliedTitle')}</div>
+										<div className='text-sm text-content-tertiary'>
+											{isGrant
+												? t('entitlements.overridesTable.tooltipAllowance', {
+														from: originalText ?? currentText,
+														to: currentText,
+													})
+												: t('entitlements.overridesTable.tooltipUsageLimit', {
+														from: formatUsageLimit(originalLimit),
+														to: formatUsageLimit(limit),
+													})}
+										</div>
+									</div>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					)}
+				</div>
+			);
+		}
+
+		if (featureType === FEATURE_TYPE.STATIC) {
+			const value = getEffectiveStaticValue(entitlementData) || '--';
+			const originalValue = row.originalStaticValue || '--';
+			const hasChanged = row.isOverrideOfParent && value !== originalValue;
+
+			return (
+				<div className='flex items-center gap-2'>
+					<span>{value}</span>
+					{hasChanged && (
+						<TooltipProvider delayDuration={0}>
+							<Tooltip>
+								<TooltipTrigger>
+									<Info className='h-4 w-4 text-accent-orange hover:text-accent-orange transition-colors duration-150' />
+								</TooltipTrigger>
+								<TooltipContent
+									sideOffset={5}
+									className='bg-surface border border-line shadow-lg text-sm text-content px-4 py-3 rounded-[6px] max-w-[300px]'>
+									<div className='space-y-2'>
+										<div className='font-medium text-content'>{t('entitlements.overridesTable.overrideAppliedTitle')}</div>
+										<div className='text-sm text-content-tertiary'>
+											{t('entitlements.overridesTable.tooltipStaticValue', { from: String(originalValue), to: String(value) })}
+										</div>
+									</div>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					)}
+				</div>
+			);
+		}
+
+		if (featureType === FEATURE_TYPE.BOOLEAN) {
+			const value = entitlementData?.is_enabled ? tc('labels.enabled') : tc('labels.disabled');
+			const originalValue =
+				row.originalIsEnabled === undefined ? undefined : row.originalIsEnabled ? tc('labels.enabled') : tc('labels.disabled');
+			const hasChanged = row.isOverrideOfParent && originalValue !== undefined && value !== originalValue;
+
+			return (
+				<div className='flex items-center gap-2'>
+					<span>{value}</span>
+					{hasChanged && (
+						<TooltipProvider delayDuration={0}>
+							<Tooltip>
+								<TooltipTrigger>
+									<Info className='h-4 w-4 text-accent-orange hover:text-accent-orange transition-colors duration-150' />
+								</TooltipTrigger>
+								<TooltipContent
+									sideOffset={5}
+									className='bg-surface border border-line shadow-lg text-sm text-content px-4 py-3 rounded-[6px] max-w-[300px]'>
+									<div className='space-y-2'>
+										<div className='font-medium text-content'>{t('entitlements.overridesTable.overrideAppliedTitle')}</div>
+										<div className='text-sm text-content-tertiary'>
+											{t('entitlements.overridesTable.tooltipStatus', { from: originalValue!, to: value })}
+										</div>
+									</div>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					)}
+				</div>
+			);
+		}
+
+		if (featureType === FEATURE_TYPE.CONFIG) {
+			const cv = getEffectiveConfigValue(row.sources);
+			const compact = cv && Object.keys(cv).length > 0 ? JSON.stringify(cv) : null;
+			if (!compact) return <span className='text-muted-foreground'>{tc('labels.na')}</span>;
+			return (
+				<div className='flex items-center gap-2'>
+					<button
+						type='button'
+						className='font-mono text-xs text-left text-muted-foreground rounded border border-transparent transition-all hover:border-border hover:shadow-sm hover:text-foreground max-w-md'
+						style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-all' }}
+						onClick={() => setConfigSheet({ open: true, name: row.feature?.name ?? '', value: cv ?? null })}>
+						{compact}
+					</button>
+					{row.isOverrideOfParent && (
+						<TooltipProvider delayDuration={0}>
+							<Tooltip>
+								<TooltipTrigger>
+									<Info className='h-4 w-4 text-accent-orange hover:text-accent-orange transition-colors duration-150' />
+								</TooltipTrigger>
+								<TooltipContent
+									sideOffset={5}
+									className='bg-surface border border-line shadow-lg text-sm text-content px-4 py-3 rounded-[6px] max-w-[300px]'>
+									<div className='space-y-2'>
+										<div className='font-medium text-content'>{t('entitlements.overridesTable.overrideAppliedTitle')}</div>
+										<div className='text-sm text-content-tertiary'>{t('entitlements.overridesTable.tooltipConfig')}</div>
+									</div>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					)}
+				</div>
+			);
+		}
+
+		return '--';
+	};
+
+	const handleEdit = (entitlement: EnrichedSubscriptionEntitlement) => {
+		setDropdownOpen(null);
+		setSelectedEntitlement(entitlement);
+		setEditDrawerOpen(true);
+	};
+
+	const handleDelete = (entitlement: EnrichedSubscriptionEntitlement) => {
+		setDropdownOpen(null);
+		setEntitlementToDelete(entitlement);
+		setIsDeleteDialogOpen(true);
+	};
+
+	const confirmDelete = () => {
+		if (entitlementToDelete?.subscriptionEntitlementId) {
+			deleteEntitlement(entitlementToDelete.subscriptionEntitlementId);
+		}
+	};
+
+	const cancelDelete = () => {
+		setIsDeleteDialogOpen(false);
+		setEntitlementToDelete(null);
+	};
+
+	const handleResetOverride = (entitlement: EnrichedSubscriptionEntitlement) => {
+		if (entitlement.subscriptionEntitlementId) {
+			deleteEntitlement(entitlement.subscriptionEntitlementId);
+		}
+	};
+
+	const columns: ColumnData<EntitlementRow>[] = [
+		{
+			title: t('entitlements.overridesTable.columnFeatureName'),
+			render: (row) =>
+				isGrantRow(row) ? (
+					<span>{t('entitlements.subscriptionEntitlementGrants.featureName')}</span>
+				) : (
+					<span>{row.feature?.name || tc('labels.unknownFeature')}</span>
+				),
+		},
+		{
+			title: t('entitlements.subscriptionEdit.columnSource'),
+			render: (row) => (
+				<span className='capitalize text-sm text-content-tertiary'>
+					{isGrantRow(row) ? t('entitlements.subscriptionEntitlementGrants.source') : getSourceLabel(row)}
+				</span>
+			),
+		},
+		{
+			title: t('entitlements.overridesTable.columnFeatureType'),
+			render: (row) => (isGrantRow(row) ? '--' : getFeatureTypeChip(row.feature_type)),
+		},
+		{
+			title: t('entitlements.overridesTable.columnMeasure'),
+			render: (row) => {
+				if (isGrantRow(row)) return t('entitlements.overridesTable.measureAmountLabel');
+				// The value column carries no unit word, so this says what it counts.
+				if ((row.feature_type as FEATURE_TYPE) !== FEATURE_TYPE.METERED) return '--';
+				const measure = row.entitlement?.grant_measure;
+				if (!measure) return '--';
+				return measure === ENTITLEMENT_GRANT_MEASURE.AMOUNT
+					? t('entitlements.overridesTable.measureAmountLabel')
+					: t('entitlements.overridesTable.measureQuantityLabel');
+			},
+		},
+		{
+			title: t('entitlements.overridesTable.columnValue'),
+			render: (row) =>
+				isGrantRow(row) ? `${money(row.grant.grant_quota)} / ${formatGrantPeriod(row.grant, t)}` : getEntitlementValue(row),
+		},
+		{
+			title: '',
+			width: '30px',
+			fieldVariant: 'interactive',
+			hideOnEmpty: true,
+			render: (row) => {
+				if (readOnly) {
+					return null;
+				}
+
+				if (isGrantRow(row)) {
+					return (
+						<div
+							data-interactive='true'
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+							}}>
+							<DropdownMenu open={dropdownOpen === row.grant.id} onOpenChange={(open) => setDropdownOpen(open ? row.grant.id : null)}>
+								<DropdownMenuTrigger asChild>
+									<button className='focus:outline-none' aria-label={t('entitlements.subscriptionEntitlementGrants.actionsMenu')}>
+										<BsThreeDots className='text-base text-muted-foreground hover:text-foreground transition-colors' />
+									</button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align='end'>
+									<DropdownMenuItem
+										disabled={!canWriteEntitlement}
+										onSelect={() => openGrantDialog(row.grant)}
+										className='flex gap-2 items-center cursor-pointer'>
+										<Pencil className='h-4 w-4' />
+										<span>{t('entitlements.subscriptionEntitlementGrants.editQuota')}</span>
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										disabled={!canWriteEntitlement}
+										onSelect={() => {
+											setDropdownOpen(null);
+											setGrantToDelete(row.grant);
+										}}
+										className='flex gap-2 items-center cursor-pointer text-danger'>
+										<Trash2 className='h-4 w-4' />
+										<span>{tc('actions.delete')}</span>
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						</div>
+					);
+				}
+
+				const canDelete = !!row.subscriptionEntitlementId;
+				// One field per feature can only address one entitlement. With several
+				// contributing, the field would silently pick one of them: additive pools
+				// them into a single window, so the total stops matching what was typed,
+				// and parallel gives each its own window with nothing to say which is meant.
+				const contributors = row.sources?.length ?? 0;
+				const canEdit = contributors <= 1;
+
+				if (!canEdit && !canDelete) {
+					return null;
+				}
+
+				return (
+					<div
+						data-interactive='true'
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+						}}>
+						<DropdownMenu open={dropdownOpen === row.feature_id} onOpenChange={(open) => setDropdownOpen(open ? row.feature_id : null)}>
+							<DropdownMenuTrigger asChild>
+								<button className='focus:outline-none'>
+									<BsThreeDots className='text-base text-muted-foreground hover:text-foreground transition-colors' />
+								</button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align='end'>
+								<TooltipProvider delayDuration={0}>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<div>
+												<DropdownMenuItem
+													disabled={!canWriteEntitlement || !canEdit}
+													onSelect={(e) => {
+														e.preventDefault();
+														if (!canWriteEntitlement || !canEdit) return;
+														handleEdit(row);
+													}}
+													className={`flex gap-2 items-center cursor-pointer ${!canWriteEntitlement || !canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}>
+													<Pencil className='h-4 w-4' />
+													<span>{t('entitlements.overridesTable.edit')}</span>
+												</DropdownMenuItem>
+											</div>
+										</TooltipTrigger>
+										{!canEdit && (
+											<TooltipContent side='left' className='max-w-[280px]'>
+												{t('entitlements.subscriptionEdit.editBlockedMultipleSources')}
+											</TooltipContent>
+										)}
+									</Tooltip>
+								</TooltipProvider>
+								{canDelete && (
+									<DropdownMenuItem
+										disabled={!canWriteEntitlement}
+										onSelect={(e) => {
+											e.preventDefault();
+											if (!canWriteEntitlement) return;
+											handleDelete(row);
+										}}
+										className={`flex gap-2 items-center cursor-pointer text-danger ${!canWriteEntitlement ? 'opacity-50 cursor-not-allowed' : ''}`}>
+										<Trash2 className='h-4 w-4' />
+										<span>{row.isOverrideOfParent ? t('entitlements.subscriptionEdit.resetAction') : tc('actions.delete')}</span>
+									</DropdownMenuItem>
+								)}
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
+				);
+			},
+		},
+	];
+
+	const handleAddDrawerClose = (value: boolean) => {
+		setAddDrawerOpen(value);
+		if (!value) {
+			invalidateEntitlements();
+		}
+	};
+
+	if (isLoading) {
+		return (
+			<Card variant='notched'>
+				<CardHeader title={tc('labels.entitlements')} />
+				<div className='flex justify-center items-center py-8'>
+					<span className='text-content-muted'>{tc('labels.loadingEntitlements')}</span>
+				</div>
+			</Card>
+		);
+	}
+
+	if (isError) {
+		return null;
+	}
+
+	const deleteDialogTitle = entitlementToDelete?.isOverrideOfParent
+		? t('entitlements.subscriptionEdit.resetConfirmTitle', { name: entitlementToDelete.feature?.name || tc('labels.thisFeature') })
+		: t('entitlements.subscriptionEdit.deleteConfirmTitle', { name: entitlementToDelete?.feature?.name || tc('labels.thisFeature') });
+
+	const deleteDialogDescription = entitlementToDelete?.isOverrideOfParent
+		? t('entitlements.subscriptionEdit.resetConfirmDescription')
+		: tc('confirm.deleteDescription');
+
+	const deleteButtonLabel = entitlementToDelete?.isOverrideOfParent
+		? t('entitlements.subscriptionEdit.resetAction')
+		: isDeletingEntitlement
+			? tc('status.deleting')
+			: tc('actions.delete');
+
+	const addMenu = (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild disabled={readOnly || !canWriteEntitlement}>
+				<Button prefixIcon={<Plus />} disabled={readOnly || !canWriteEntitlement}>
+					{tc('actions.add')}
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align='end'>
+				<DropdownMenuItem onSelect={() => setAddDrawerOpen(true)} className='cursor-pointer'>
+					{t('entitlements.subscriptionEntitlementGrants.addFeatureEntitlement')}
+				</DropdownMenuItem>
+				<DropdownMenuItem onSelect={() => openGrantDialog(null)} className='cursor-pointer'>
+					{t('entitlements.subscriptionEntitlementGrants.addSubscriptionEntitlementGrant')}
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+
+	return (
+		<>
+			{rows.length > 0 ? (
+				<Card variant='notched'>
+					<CardHeader title={tc('labels.entitlements')} cta={addMenu} />
+					<FlexpriceTable showEmptyRow data={rows} columns={columns} variant='no-bordered' />
+				</Card>
+			) : (
+				<NoDataCard title={tc('labels.entitlements')} subtitle={tc('labels.noEntitlementsAddedYet')} cta={addMenu} />
+			)}
+
+			<AddEntitlementDrawer
+				isOpen={addDrawerOpen}
+				onOpenChange={handleAddDrawerClose}
+				entityType={ENTITLEMENT_ENTITY_TYPE.SUBSCRIPTION}
+				entityId={subscriptionId}
+				entitlements={entitlements as never}
+			/>
+
+			<EditSubscriptionEntitlementDrawer
+				isOpen={editDrawerOpen}
+				onOpenChange={setEditDrawerOpen}
+				subscriptionId={subscriptionId}
+				entitlement={selectedEntitlement}
+				onSuccess={invalidateEntitlements}
+				onReset={handleResetOverride}
+			/>
+
+			<Dialog
+				title={deleteDialogTitle}
+				description={deleteDialogDescription}
+				titleClassName='text-lg font-normal text-content-heading'
+				isOpen={isDeleteDialogOpen}
+				onOpenChange={setIsDeleteDialogOpen}
+				showCloseButton={false}>
+				<div className='flex flex-col gap-4 items-end justify-center'>
+					<div className='flex gap-4'>
+						<Button variant='outline' onClick={cancelDelete} disabled={isDeletingEntitlement}>
+							{tc('actions.cancel')}
+						</Button>
+						<Button variant='destructive' onClick={confirmDelete} disabled={isDeletingEntitlement}>
+							{deleteButtonLabel}
+						</Button>
+					</div>
+				</div>
+			</Dialog>
+
+			{grantDialogOpen && (
+				<SubscriptionEntitlementGrantDialog
+					key={grantToEdit?.id ?? 'new'}
+					isOpen={grantDialogOpen}
+					onOpenChange={setGrantDialogOpen}
+					subscriptionId={subscriptionId}
+					currency={currency}
+					grant={grantToEdit}
+					onSaved={invalidateEntitlements}
+				/>
+			)}
+
+			<Dialog
+				title={t('entitlements.subscriptionEntitlementGrants.deleteConfirmTitle')}
+				description={t('entitlements.subscriptionEntitlementGrants.deleteConfirmDescription')}
+				titleClassName='text-lg font-normal text-content-heading'
+				isOpen={!!grantToDelete}
+				onOpenChange={(open) => !open && setGrantToDelete(null)}
+				showCloseButton={false}>
+				<div className='flex justify-end gap-4'>
+					<Button variant='outline' onClick={() => setGrantToDelete(null)} disabled={isDeletingGrant}>
+						{tc('actions.cancel')}
+					</Button>
+					<Button variant='destructive' onClick={() => grantToDelete && deleteGrant(grantToDelete.id)} disabled={isDeletingGrant}>
+						{isDeletingGrant ? tc('status.deleting') : tc('actions.delete')}
+					</Button>
+				</div>
+			</Dialog>
+
+			<Sheet isOpen={configSheet.open} onOpenChange={(open) => setConfigSheet((s) => ({ ...s, open }))} title={configSheet.name} size='2xl'>
+				<div className='p-6'>{configSheet.value && <JsonCodeBlock value={configSheet.value} />}</div>
+			</Sheet>
+		</>
+	);
+};
+
+export default SubscriptionEntitlementsSection;

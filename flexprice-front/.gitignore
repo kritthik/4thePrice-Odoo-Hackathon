@@ -1,0 +1,62 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+yarn.lock
+package-lock.json
+.env
+.vercel
+tsconfig.tsbuildinfo
+tsconfig.app.tsbuildinfo
+.dev
+# dotenv-store encryption key
+.env.store.key
+
+# build
+vite.config.js
+
+
+# env files
+.env.*
+.claude/settings.local.json
+
+# Local scratch
+tmp-*.txt
+deploy-config.json
+# Playwright
+# .env.* above already covers .env.e2e; these are run outputs and the cached
+# authenticated session, none of which belong in the repo.
+/playwright-report/
+/test-results/
+/blob-report/
+/e2e/.auth/
+/playwright/.cache/
+
+# Visual-regression baselines generated on a developer machine. Snapshots are
+# platform-specific and font-rendering-sensitive; only baselines produced in the
+# Playwright Docker image (matching CI) belong in the repo. See e2e/README.md.
+/e2e/visual/**/*-darwin.png
+/e2e/visual/**/*-win32.png
+
+# Superpowers working specs (session artifacts, not repo docs)
+docs/superpowers/

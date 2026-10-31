@@ -1,0 +1,146 @@
+import { useParams } from 'react-router';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Button, Card, CardHeader, NoDataCard, Loader, Tooltip } from '@/components/atoms';
+import { Plus } from 'lucide-react';
+import { useCurrentUserPermissions } from '@/hooks/useCurrentUserPermissions';
+import { uniqueId } from 'lodash';
+import CreditGrantApi from '@/api/CreditGrantApi';
+import { CreditGrantsTable, CreditGrantModal } from '@/components/molecules';
+import { refetchQueries } from '@/core/services/tanstack/ReactQueryProvider';
+import toast from 'react-hot-toast';
+import {
+	CREDIT_GRANT_PERIOD_UNIT,
+	CREDIT_GRANT_EXPIRATION_TYPE,
+	CREDIT_GRANT_CADENCE,
+	CREDIT_GRANT_PERIOD,
+	CREDIT_GRANT_SCOPE,
+	ENTITY_STATUS,
+} from '@/models';
+import { InternalCreditGrantRequest, CreateCreditGrantRequest } from '@/types/dto/CreditGrant';
+import { useTranslation } from 'react-i18next';
+
+const PlanCreditGrantsTab = () => {
+	const { t } = useTranslation(['catalog', 'common']);
+	const { can } = useCurrentUserPermissions();
+	const canWriteCreditGrant = can('creditgrant', 'write');
+	const { planId } = useParams<{ planId: string }>();
+	const [creditGrantModalOpen, setCreditGrantModalOpen] = useState(false);
+
+	const {
+		data: creditGrantsData,
+		isLoading,
+		isError,
+	} = useQuery({
+		queryKey: ['planCreditGrants', planId],
+		queryFn: async () => {
+			return await CreditGrantApi.list({
+				plan_ids: [planId!],
+				scope: CREDIT_GRANT_SCOPE.PLAN,
+				status: ENTITY_STATUS.PUBLISHED,
+			});
+		},
+		enabled: !!planId,
+	});
+
+	const { mutate: updatePlanWithCreditGrant, isPending: isCreatingCreditGrant } = useMutation({
+		mutationFn: async (data: CreateCreditGrantRequest) => {
+			const grantWithPlanId = {
+				...data,
+				plan_id: planId!,
+			};
+			return await CreditGrantApi.create(grantWithPlanId);
+		},
+		onSuccess: () => {
+			toast.success('Credit grant added successfully');
+			setCreditGrantModalOpen(false);
+			refetchQueries(['planCreditGrants', planId!]);
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || 'Failed to add credit grant');
+		},
+	});
+
+	const getEmptyCreditGrant = (): InternalCreditGrantRequest => {
+		return {
+			id: uniqueId('credit-grant-'),
+			credits: 0,
+			period: CREDIT_GRANT_PERIOD.MONTHLY,
+			name: 'Free Credits',
+			scope: CREDIT_GRANT_SCOPE.PLAN,
+			cadence: CREDIT_GRANT_CADENCE.ONETIME,
+			period_count: 1,
+			plan_id: planId!,
+			expiration_type: CREDIT_GRANT_EXPIRATION_TYPE.NEVER,
+			expiration_duration_unit: CREDIT_GRANT_PERIOD_UNIT.DAYS,
+			priority: 0,
+			metadata: {},
+		};
+	};
+
+	const handleSaveCreditGrant = (data: InternalCreditGrantRequest) => {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { id, ...createRequest } = data;
+		updatePlanWithCreditGrant(createRequest);
+	};
+
+	const handleCancelCreditGrant = () => {
+		setCreditGrantModalOpen(false);
+	};
+
+	if (isLoading) {
+		return <Loader />;
+	}
+
+	if (isError) {
+		toast.error('Error loading credit grants');
+		return null;
+	}
+
+	const creditGrants = creditGrantsData?.items || [];
+
+	const addButton = canWriteCreditGrant ? (
+		<Button prefixIcon={<Plus />} onClick={() => setCreditGrantModalOpen(true)} disabled={isCreatingCreditGrant}>
+			{isCreatingCreditGrant ? t('common:actions.adding') : t('common:actions.add')}
+		</Button>
+	) : (
+		<Tooltip content={t('catalog:plans.creditGrantsTab.writeDeniedTooltip')}>
+			<span tabIndex={0} className='inline-block cursor-not-allowed'>
+				<Button disabled prefixIcon={<Plus />}>
+					{t('common:actions.add')}
+				</Button>
+			</span>
+		</Tooltip>
+	);
+
+	return (
+		<>
+			<CreditGrantModal
+				data={undefined}
+				isOpen={creditGrantModalOpen}
+				onOpenChange={setCreditGrantModalOpen}
+				onSave={handleSaveCreditGrant}
+				onCancel={handleCancelCreditGrant}
+				getEmptyCreditGrant={getEmptyCreditGrant}
+			/>
+			<div className='space-y-6'>
+				{creditGrants.length > 0 ? (
+					<Card variant='notched'>
+						<CardHeader title={t('catalog:plans.tabs.creditGrants')} cta={addButton} />
+						<CreditGrantsTable
+							data={creditGrants}
+							onDelete={async () => {
+								refetchQueries(['planCreditGrants', planId!]);
+							}}
+							showEmptyRow
+						/>
+					</Card>
+				) : (
+					<NoDataCard title={t('catalog:plans.tabs.creditGrants')} subtitle='No credit grants added to the plan yet' cta={addButton} />
+				)}
+			</div>
+		</>
+	);
+};
+
+export default PlanCreditGrantsTab;

@@ -1,0 +1,38 @@
+import { Page, Button } from '@/components/atoms';
+import { useTranslation } from 'react-i18next';
+import { useParams, useNavigate } from 'react-router';
+import { ArrowLeft } from 'lucide-react';
+import TaskRunsTable from '@/components/molecules/TaskRunsTable/TaskRunsTable';
+import { ApiDocsContent } from '@/components/molecules';
+import { API_DOCS_TAGS } from '@/constants/apiDocsTags';
+import { RouteNames } from '@/core/routes/Routes';
+
+const TaskRunsPage = () => {
+	const { t } = useTranslation('settings');
+	const { connectionId, exportId } = useParams<{ connectionId: string; exportId: string }>();
+	const navigate = useNavigate();
+
+	return (
+		<Page heading={t('insightsTools.exports.taskRunsHeading')}>
+			<ApiDocsContent tags={API_DOCS_TAGS.Tasks} />
+
+			{/* Back button */}
+			<div className='mb-6'>
+				<Button
+					variant='outline'
+					onClick={() => navigate(RouteNames.s3ExportDetails.replace(':connectionId', connectionId!).replace(':exportId', exportId!))}
+					className='flex items-center gap-2'>
+					<ArrowLeft className='w-4 h-4' />
+					{t('insightsTools.exports.backToExportDetails')}
+				</Button>
+			</div>
+
+			{/* Task Runs Table */}
+			<div className='space-y-6'>
+				<TaskRunsTable scheduledTaskId={exportId!} taskType='EXPORT' />
+			</div>
+		</Page>
+	);
+};
+
+export default TaskRunsPage;

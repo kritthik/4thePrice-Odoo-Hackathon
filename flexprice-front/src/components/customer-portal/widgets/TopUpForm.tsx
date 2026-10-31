@@ -1,0 +1,284 @@
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
+import CustomerPortalApi from '@/api/CustomerPortalApi';
+import { portalReturnUrl } from '../portalReturnUrl';
+import { openPaymentUrl } from '@/utils/common/openPaymentUrl';
+import { Button, Input, Toggle } from '@/components/atoms';
+import { refreshAfterPayment } from '../refetchPortalQueries';
+import { getCurrencySymbol } from '@/utils/common/helper_functions';
+import { formatMoney } from '@/utils/common/formatBalance';
+import type { PaymentGatewayType, PortalCheckoutSession, PortalTopUpRequest, SavedPaymentMethod } from '@/types/dto/CustomerPortalBilling';
+import { isBlockedByExistingEntity, supersedeExistingEntity } from '@/utils/common/entityCreation';
+import PendingCheckoutDialog from './PendingCheckoutDialog';
+import { WalletResponse } from '@/types/dto/Wallet';
+import { portalPaymentMethodsQueryKey } from '../queryKeys';
+import { rememberPendingCheckout } from '../useCheckoutReturn';
+import usePortalIntegrations from '../usePortalIntegrations';
+
+interface TopUpFormProps {
+	wallet: WalletResponse;
+	onDone?: () => void;
+	/** Surfaces the action URL so a blocked redirect stays recoverable. */
+	onActionUrl?: (url: string) => void;
+}
+
+const describeCard = (method: SavedPaymentMethod) =>
+	method.card?.last4 ? `${method.card.brand ?? 'card'} •••• ${method.card.last4}` : method.id;
+
+/**
+ * Credit top-up for the customer portal.
+ *
+ * Narrower than the admin form by design: transaction reason, expiry and priority
+ * are pinned server-side, so there is no free/purchased choice and no scheduling
+ * fields. There is also no save-card option — portal checkouts always vault.
+ *
+ * Two exits, matching how the money moves:
+ *   Pay now          — checkout; credits land once payment succeeds
+ *   Generate invoice — invoice raised now, settled later
+ */
+const TopUpForm = ({ wallet, onDone, onActionUrl }: TopUpFormProps) => {
+	const { t } = useTranslation('customer-portal');
+	const { maySupport, providersFor } = usePortalIntegrations();
+	const [credits, setCredits] = useState('');
+	const [description, setDescription] = useState('');
+	const [useSavedMethod, setUseSavedMethod] = useState(false);
+	// One key per *unchanged* attempt. Retrying the same submission must reuse it so
+	// the server dedups, but editing the amount after a failure makes it a different
+	// request — reusing the key there could return the original checkout, or be
+	// rejected, if the first call actually succeeded and only its response was lost.
+	const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+	const [submittedPayload, setSubmittedPayload] = useState<string | null>(null);
+	// The session that blocked the last attempt. Held rather than turned into a
+	// toast because the customer has a real choice to make about it.
+	const [blockingSession, setBlockingSession] = useState<PortalCheckoutSession | null>(null);
+
+	// The resolver refuses to guess: with more than one checkout-capable gateway it
+	// returns "Specify which payment provider to use" rather than falling back to a
+	// default, so the provider is always named explicitly.
+	const checkoutProviders = providersFor('checkout');
+	const [selectedProvider, setSelectedProvider] = useState<PaymentGatewayType | ''>('');
+	// providersFor sorts the capability default first, so [0] is the tenant's pick.
+	const effectiveProvider = selectedProvider || checkoutProviders[0];
+
+	const payloadFingerprint = `${credits}|${description}|${useSavedMethod}|${effectiveProvider ?? ''}`;
+	// An edit after a failed submit invalidates the key for the next attempt.
+	const keyForSubmission = submittedPayload !== null && submittedPayload !== payloadFingerprint ? crypto.randomUUID() : idempotencyKey;
+
+	// Optimistic: only hidden when /integrations has loaded and names no checkout
+	// provider. A slow or failing integrations call must not remove the pay button.
+	const canCheckout = maySupport('checkout');
+
+	const { data: methods } = useQuery({
+		queryKey: portalPaymentMethodsQueryKey,
+		queryFn: () => CustomerPortalApi.getPaymentMethods(),
+		enabled: canCheckout,
+	});
+
+	// Only an active, auto-chargeable method for a provider that supports auto_charge is eligible.
+	const providerSupportsAutoCharge = providersFor('auto_charge').includes(effectiveProvider);
+	const providerMethods = (methods?.providers ?? []).find((group) => group.provider === effectiveProvider);
+	const chargeableMethod = providerSupportsAutoCharge
+		? (providerMethods?.items.find((method) => method.can_auto_charge && method.status === 'ACTIVE' && method.is_default) ??
+			providerMethods?.items.find((method) => method.can_auto_charge && method.status === 'ACTIVE'))
+		: undefined;
+
+	useEffect(() => {
+		setUseSavedMethod(false);
+	}, [effectiveProvider]);
+
+	// `supersede` is the retry the customer authorises from PendingCheckoutDialog;
+	// the first attempt always goes out under the server's default (reject) so a
+	// payment already in flight is never cancelled without them saying so.
+	const {
+		mutate: topUp,
+		isPending,
+		variables: lastAttemptSuperseded,
+	} = useMutation({
+		mutationFn: async (supersede?: boolean) => {
+			// Recorded so an unchanged retry reuses this key while an edited one does not.
+			setSubmittedPayload(payloadFingerprint);
+			setIdempotencyKey(keyForSubmission);
+
+			const payload: PortalTopUpRequest = {
+				credits_to_add: credits,
+				idempotency_key: keyForSubmission,
+				...(description ? { description } : {}),
+				checkout: {
+					// Sent explicitly. The resolver only picks for us when exactly one
+					// provider has the capability — with two it refuses as ambiguous and
+					// ignores is_default entirely. Chosen from /integrations rather than
+					// asked of the customer, who should never learn the gateway.
+					...(effectiveProvider ? { payment_provider: effectiveProvider } : {}),
+					use_saved_method: useSavedMethod && !!chargeableMethod,
+					success_url: portalReturnUrl(),
+					cancel_url: portalReturnUrl(),
+					// Reusing the idempotency key is safe and wanted: the rejected attempt
+					// created nothing, so this is still the same top-up, only now allowed
+					// to displace the stale session.
+					...(supersede ? { entity_creation_options: supersedeExistingEntity } : {}),
+				},
+			};
+			return CustomerPortalApi.topUpWallet(wallet.id, payload);
+		},
+		onSuccess: async (response) => {
+			// Read before the action URL, and before the status: a blocked response is a
+			// complete, healthy-looking session — the one already in flight — so every
+			// branch below would otherwise treat someone else's checkout as this one's.
+			if (isBlockedByExistingEntity(response.checkout_session?.entity_creation_result)) {
+				setBlockingSession(response.checkout_session ?? null);
+				return;
+			}
+			setBlockingSession(null);
+
+			const action = response.checkout_session?.payment_action;
+
+			// use_saved_method can settle outright, and some providers vault
+			// server-to-server — so an absent action means done, not broken.
+			if (action?.url) {
+				if (response.checkout_session?.id) rememberPendingCheckout(response.checkout_session.id);
+				// Surface the link first, then open it. Both, not either: the open runs in
+				// an async callback rather than the click, so a popup blocker can stop it,
+				// and the dialog stays on the page carrying the link either way — for a
+				// blocked open, and for coming back to it after the tab is closed.
+				onActionUrl?.(action.url);
+				openPaymentUrl(action.url);
+				return;
+			}
+
+			// No action to follow is not automatically a failure: use_saved_method
+			// charges the card outright, and the session comes back completed with
+			// nothing to redirect to. Read the status rather than inferring from the
+			// absent action — treating that as an error rejected a payment that had
+			// already succeeded.
+			const status = response.checkout_session?.checkout_status;
+			if (status === 'failed' || status === 'expired') {
+				toast.error(response.checkout_session?.failure_reason || t('errors.checkoutUnavailable'));
+				return;
+			}
+			if (response.checkout_session && !action?.url && status !== 'completed') {
+				// Still settling and nowhere to send them: the wallet updates on the
+				// webhook, so say it is in flight rather than claiming either outcome.
+				toast.success(t('topUp.successPending'));
+			} else {
+				toast.success(status === 'completed' ? t('topUp.paid') : t('topUp.successPending'));
+			}
+			setCredits('');
+			setDescription('');
+			setIdempotencyKey(crypto.randomUUID());
+			setSubmittedPayload(null);
+			onDone?.();
+			// Re-checks until the credit lands: the transaction and its invoice are
+			// written by a webhook that can arrive after the response does.
+			await refreshAfterPayment();
+		},
+		onError: (error: Error) => toast.error(error.message || t('errors.topUp')),
+	});
+
+	const parsedCredits = Number(credits);
+	const isValid = credits !== '' && Number.isFinite(parsedCredits) && parsedCredits > 0;
+
+	const currencySymbol = getCurrencySymbol(wallet.currency ?? 'USD');
+	// topup_conversion_rate, not conversion_rate: the backend prices a top-up with
+	// GetCurrencyAmountFromCredits(credits, w.TopupConversionRate), so using the
+	// spend rate here would quote an amount the customer is not actually charged.
+	const conversionRate = Number(wallet.topup_conversion_rate ?? wallet.conversion_rate ?? 1) || 1;
+	const chargeAmount = isValid ? formatMoney(parsedCredits * conversionRate) : null;
+
+	return (
+		<div className='flex flex-col gap-4'>
+			<Input
+				variant='formatted-number'
+				label={t('topUp.creditsLabel')}
+				placeholder={t('topUp.creditsPlaceholder')}
+				value={credits}
+				onChange={setCredits}
+				disabled={isPending}
+				suffix={t('wallet.credits')}
+				description={chargeAmount ? <span>{t('topUp.chargeSummary', { amount: `${currencySymbol}${chargeAmount}` })}</span> : undefined}
+			/>
+
+			<Input
+				label={t('topUp.descriptionLabel')}
+				placeholder={t('topUp.descriptionPlaceholder')}
+				value={description}
+				onChange={setDescription}
+				disabled={isPending}
+			/>
+
+			{/* Shown for a single provider too, not just a choice of several: the customer
+			    is about to be handed to a third party, and naming it is part of telling
+			    them what happens next. It is simply already selected. */}
+			{canCheckout && checkoutProviders.length > 0 && (
+				<div>
+					<p className='text-sm font-medium mb-1 text-content'>{t('topUp.providerLabel')}</p>
+					{/* Inline rather than a Select: a Radix Select portals its list outside
+					    the dialog, and this dialog is modal={false}, so choosing an option
+					    reads as an outside click to the dismissable layer and closed the
+					    whole dialog mid-choice. With a handful of providers there is no
+					    reason to introduce a second dismissable layer at all. */}
+					<div role='radiogroup' aria-label={t('topUp.providerLabel')} className='flex flex-wrap gap-2'>
+						{checkoutProviders.map((provider: PaymentGatewayType) => {
+							const isSelected = effectiveProvider === provider;
+							return (
+								<button
+									key={provider}
+									type='button'
+									role='radio'
+									aria-checked={isSelected}
+									onClick={() => setSelectedProvider(provider)}
+									disabled={isPending}
+									className='px-3.5 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50'
+									style={{
+										borderColor: isSelected ? 'var(--portal-primary, #2563eb)' : 'var(--portal-border, #E9E9E9)',
+										color: isSelected ? 'var(--portal-primary, #2563eb)' : 'var(--portal-text-primary, #09090b)',
+										backgroundColor: isSelected ? 'var(--portal-bg, #eff6ff)' : 'transparent',
+									}}>
+									{t(`paymentProviders.${provider}`)}
+								</button>
+							);
+						})}
+					</div>
+					{/* Only a choice when there is one to make — with a single provider the
+					    hint would invite a decision the customer does not have. */}
+					{checkoutProviders.length > 1 && <p className='text-xs mt-1.5 text-content-secondary'>{t('topUp.providerHint')}</p>}
+				</div>
+			)}
+
+			{canCheckout && chargeableMethod && (
+				<Toggle
+					label={t('topUp.useSavedMethod', { method: describeCard(chargeableMethod) })}
+					description={t('topUp.useSavedMethodHint')}
+					checked={useSavedMethod}
+					onChange={setUseSavedMethod}
+					disabled={isPending}
+				/>
+			)}
+
+			{/* Not gated on checkout being configured. Without it the request still
+			    raises an invoice, and the response says so — announcing the account's
+			    payment setup to the customer told them about the tenant's configuration
+			    rather than about anything they can do, and blocked an action that works. */}
+			<div className='pt-1'>
+				<Button className='w-full' onClick={() => topUp(false)} disabled={!isValid || isPending} isLoading={isPending}>
+					{t('topUp.payNow')}
+				</Button>
+				{canCheckout && <p className='mt-2 text-center text-xs text-content-tertiary'>{t('topUp.cardSavedNotice')}</p>}
+			</div>
+
+			{/* Kept inside the form rather than lifted to the callers: the retry is this
+			    form's mutation, and both callers already render the form inside a dialog
+			    of their own — every Dialog here is modal={false} and portalled, so this
+			    stacks over whichever one is open. */}
+			<PendingCheckoutDialog
+				session={blockingSession}
+				onOpenChange={(open) => !open && setBlockingSession(null)}
+				onStartNew={() => topUp(true)}
+				isStartingNew={isPending && lastAttemptSuperseded === true}
+			/>
+		</div>
+	);
+};
+
+export default TopUpForm;

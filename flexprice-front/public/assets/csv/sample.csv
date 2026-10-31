@@ -1,0 +1,3 @@
+event_name,external_customer_id,event_id,timestamp,source
+authentication,cus_001,event_001,2025-02-14T10:30:00Z,Web
+sign_up,cus_002,event_001,2025-02-14T11:00:00Z,Mobile

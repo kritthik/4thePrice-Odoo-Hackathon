@@ -1,0 +1,351 @@
+{
+	"wrapper": {
+		"invalidLinkTitle": "Invalid Customer Portal Link",
+		"invalidLinkDescription": "Dashboard session token is missing from the URL. Please check your link and try again.",
+		"refreshPage": "Refresh Page"
+	},
+	"footer": {
+		"poweredBy": "Powered by",
+		"brand": "Flexprice"
+	},
+	"header": {
+		"defaultInitials": "CU"
+	},
+	"errors": {
+		"fetchCustomer": "Failed to fetch customer data",
+		"loadSubscriptions": "Failed to load subscriptions",
+		"loadUsage": "Failed to load usage data",
+		"loadUsageAnalytics": "Failed to load usage analytics",
+		"loadWallet": "Failed to load wallet",
+		"loadInvoices": "Failed to load invoices",
+		"downloadInvoice": "Failed to download invoice",
+		"exportInvoice": "Failed to export invoice",
+		"loadEvents": "Failed to load events",
+		"loadWallets": "Failed to load wallets",
+		"loadTransactions": "Failed to load transactions",
+		"loadAnalytics": "Failed to load analytics",
+		"loadCostAnalytics": "Failed to load cost analytics",
+		"loadUsageBreakdown": "Failed to load usage breakdown",
+		"topUp": "Failed to start top-up",
+		"saveAutoTopUp": "Failed to save auto top-up settings",
+		"loadPaymentMethods": "Failed to load payment methods",
+		"addPaymentMethod": "Failed to start adding a payment method",
+		"payInvoice": "Failed to pay invoice",
+		"setDefaultPaymentMethod": "Failed to update default payment method",
+		"deletePaymentMethod": "Failed to remove payment method",
+		"checkoutUnavailable": "Could not open the payment page. Please try again."
+	},
+	"toast": {
+		"invoiceDownloaded": "Invoice downloaded",
+		"invoiceCsvDownloaded": "Invoice CSV downloaded",
+		"noBillableLineItems": "No billable line items to export",
+		"invoicePaymentStarted": "Payment submitted"
+	},
+	"datePreset": {
+		"today": "Today",
+		"last_7_days": "7d",
+		"last_30_days": "30d",
+		"current_month": "This Month",
+		"last_month": "Last Month"
+	},
+	"datePicker": {
+		"startDate": "Start date",
+		"endDate": "End date"
+	},
+	"timePeriod": {
+		"1d": "1d",
+		"7d": "7d",
+		"30d": "30d"
+	},
+	"billingOverview": {
+		"title": "Billing Overview",
+		"totalInvoiced": "Total invoiced",
+		"totalOverdue": "Total overdue",
+		"overdueTooltip": "Unpaid invoices past due date"
+	},
+	"subscriptionStatus": {
+		"active": "Active",
+		"trialing": "Trialing",
+		"cancelled": "Cancelled",
+		"incomplete": "Incomplete",
+		"draft": "Draft"
+	},
+	"walletStatus": {
+		"active": "Active",
+		"frozen": "Frozen",
+		"closed": "Closed"
+	},
+	"invoiceChip": {
+		"paid": "Paid",
+		"voided": "Voided",
+		"draft": "Draft",
+		"overdue": "Overdue",
+		"pending": "Pending"
+	},
+	"subscriptions": {
+		"title": "Subscriptions",
+		"emptyTitle": "No active subscriptions",
+		"emptyDescription": "You do not have any active subscriptions at the moment",
+		"unknownPlan": "Unknown Plan",
+		"nextBilling": "Next billing {{date}}",
+		"trialEnds": "Trial ends {{date}}",
+		"count_one": "{{count}} subscription",
+		"count_other": "{{count}} subscriptions"
+	},
+	"usage": {
+		"title": "Usage",
+		"currentTitle": "Current Usage",
+		"quotaTitle": "Usage Quota",
+		"breakdownTitle": "Usage Breakdown",
+		"trendTitle": "Usage Trend",
+		"unknownFeature": "Unknown Feature",
+		"unlimited": "Unlimited"
+	},
+	"events": {
+		"columnEventName": "Event Name",
+		"columnTimestamp": "Timestamp",
+		"columnEventId": "Event ID",
+		"columnProperties": "Properties",
+		"propertyCount_one": "{{count}} property",
+		"propertyCount_other": "{{count}} properties",
+		"noProperties": "No properties"
+	},
+	"invoices": {
+		"searchPlaceholder": "Search invoices...",
+		"columnDate": "Date",
+		"columnInvoiceNumber": "Invoice #",
+		"columnStatus": "Status",
+		"columnAmount": "Amount",
+		"columnDownload": "Download",
+		"emptyTitle": "No invoices",
+		"emptyDescription": "No invoices have been generated yet",
+		"noMatchTitle": "No invoices found",
+		"noMatchDescription": "No invoices match your search criteria",
+		"numberPrefix": "INV-{{id}}",
+		"pay": "Pay",
+		"columnInvoice": "Invoice",
+		"columnAction": "Action",
+		"payNow": "Pay now",
+		"view": "View",
+		"viewInvoice": "View invoice",
+		"downloadInvoice": "Download invoice",
+		"notPayable": "This invoice is not awaiting payment.",
+		"notDownloadable": "Only finalized invoices can be downloaded.",
+		"rowActions": "Actions for invoice {{invoice}}",
+		"title": "Invoices"
+	},
+	"wallet": {
+		"defaultName": "Wallet",
+		"fallbackName": "Wallet {{id}}",
+		"balance": "Balance",
+		"credits": "credits",
+		"valueSuffix": "value",
+		"emptyTitle": "No wallet",
+		"emptyDescription": "No wallet has been set up for this account",
+		"transactionHistory": "Transaction History",
+		"noTransactionsTitle": "No transactions",
+		"noTransactionsDescription": "Your transaction history will appear here",
+		"moreActions": "More wallet actions"
+	},
+	"usageAnalytics": {
+		"noDataTitle": "No usage data found",
+		"noDataDescription": "Your usage from the last {{period}} will appear here"
+	},
+	"usageEvents": {
+		"unableTitle": "Unable to load events",
+		"unableDescription": "Customer information is missing",
+		"noEventsTitle": "No events found",
+		"noEventsDescription": "Your events from the last {{period}} will appear here"
+	},
+	"usageBreakdown": {
+		"feature": "Feature",
+		"totalUsage": "Total Usage",
+		"unitPrice": "Unit Price",
+		"totalCost": "Total Cost",
+		"noGroup": "No group",
+		"expandAllAria": "Expand all",
+		"collapseAllAria": "Collapse all",
+		"unknownRow": "Unknown",
+		"cellEmDash": "—",
+		"cellEmpty": "--"
+	},
+	"metrics": {
+		"revenue": "Revenue",
+		"margin": "Margin",
+		"marginPercent": "Margin %",
+		"cpm": "CPM"
+	},
+	"topUp": {
+		"title": "Add credits",
+		"description": "Top up your balance using the payment options available on your account.",
+		"creditsLabel": "Credits",
+		"creditsPlaceholder": "Enter an amount",
+		"chargeSummary": "You'll be charged {{amount}}",
+		"action": "Continue to checkout",
+		"successPending": "Top-up requested — your balance will update once payment completes",
+		"descriptionLabel": "Description (optional)",
+		"descriptionPlaceholder": "What is this top-up for?",
+		"payNow": "Pay now",
+		"useSavedMethod": "Pay with my saved card ({{method}})",
+		"useSavedMethodTitle": "Saved card",
+		"useSavedMethodHint": "Charge the card on file instead of opening a checkout page.",
+		"useSavedMethodEmptyLabel": "Use my saved card",
+		"savedMethodUnsupported": "Your payment provider does not support charging a saved card.",
+		"savedMethodNone": "No saved card yet — add one from the Payments tab.",
+		"cardSavedNotice": "Your card is securely saved for future payments.",
+		"providerLabel": "Payment provider",
+		"providerHint": "Choose which provider to complete this payment with.",
+		"paid": "Payment complete — your credits have been added."
+	},
+	"pendingCheckout": {
+		"title": "A payment is already in progress",
+		"description": "You started a top-up for this wallet that has not finished yet. Finish that payment, or cancel it and start a new one.",
+		"continueExisting": "Continue that payment",
+		"noLink": "That payment is being processed and cannot be reopened from here.",
+		"startNew": "Cancel it and start over",
+		"startNewHint": "The earlier payment is cancelled. If you have already been charged for it, do not start over — those credits are on their way."
+	},
+	"autoTopUp": {
+		"title": "Auto top-up",
+		"description": "Automatically add credits when your balance runs low.",
+		"on": "On",
+		"off": "Off",
+		"thresholdLabel": "Top up when balance falls below",
+		"thresholdHelp": "The balance that triggers an automatic top-up",
+		"amountLabel": "Top-up amount",
+		"amountHelp": "How much to add each time",
+		"save": "Save settings",
+		"saved": "Auto top-up settings saved",
+		"summary": "Automatically add {{amount}} when your balance falls below {{threshold}}.",
+		"offSummary": "Auto top-up is off.",
+		"manage": "Manage",
+		"enable": "Enable",
+		"cancel": "Cancel",
+		"enableLabel": "Enable auto top-up",
+		"cooloffLabel": "Wait before the next auto top-up",
+		"cooloffHelp": "Wait this long after a top-up before another can run",
+		"cooloffPlaceholder": "No cooloff",
+		"cooloffUnitLabel": "Unit",
+		"cooloffUnits": {
+			"second": "Seconds",
+			"minute": "Minutes",
+			"hour": "Hours",
+			"day": "Days"
+		},
+		"noSavedCard": "No saved payment method found.",
+		"enableHint": "We top up your balance automatically so service is never interrupted.",
+		"needsCardHint": "Add a payment method to enable automatic top-ups.",
+		"enableTitle": "Auto top-up",
+		"thresholdPlaceholder": "e.g. 20",
+		"amountPlaceholder": "e.g. 100",
+		"cooloffTitle": "Cooloff",
+		"cooloffValueLabel": "Duration",
+		"cooloffOnHint": "After a top-up, we wait this long before topping up again, even if the balance is still low.",
+		"cooloffOffHint": "With cooloff off, there is no wait between automatic top-ups."
+	},
+	"paymentMethods": {
+		"title": "Payment methods",
+		"description": "Cards saved for invoices and automatic top-ups.",
+		"add": "Add card",
+		"cardLabel": "{{brand}} •••• {{last4}}",
+		"expires": "Expires {{expiry}}",
+		"default": "Default",
+		"emptyTitle": "No payment methods",
+		"emptyDescription": "Add a card to pay invoices and enable automatic top-ups",
+		"setDefault": "Set as default",
+		"defaultUpdated": "Default payment method updated",
+		"expired": "Expired",
+		"remove": "Remove",
+		"removeTitle": "Remove payment method",
+		"removeConfirm": "This card will no longer be available for payments or automatic top-ups.",
+		"cancel": "Cancel",
+		"removed": "Payment method removed",
+		"added": "Payment method added",
+		"providerUnavailable": "We couldn't load your saved cards right now.",
+		"retryHint": "Please refresh the page to try again.",
+		"unsupportedTitle": "Payment methods are not available",
+		"unsupportedDescription": "This account has no payment provider that supports saved cards.",
+		"rowActions": "Actions for {{method}}",
+		"alreadyDefault": "This is already your default card.",
+		"setDefaultUnsupported": "Your payment provider does not support a default card.",
+		"expiredCannotDefault": "An expired card cannot be made default.",
+		"allProviders": "All providers",
+		"addForProvider": "Add card ({{provider}})",
+		"providerEmptyTitle": "No {{provider}} cards",
+		"providerEmptyDescription": "Add a card for {{provider}} to pay invoices and enable automatic top-ups"
+	},
+	"invoiceDetail": {
+		"title": "Invoice",
+		"amountDue": "Amount due",
+		"amountTotal": "Total",
+		"billingPeriod": "Billing period",
+		"issued": "Issued",
+		"dueDate": "Due date",
+		"lineItems": "Line items",
+		"quantity": "Qty {{quantity}}",
+		"noLineItems": "No line items on this invoice",
+		"subtotal": "Subtotal",
+		"discount": "Discount",
+		"tax": "Tax",
+		"total": "Total",
+		"amountPaid": "Amount paid",
+		"download": "Download",
+		"payUnavailableHint": "Online payment is not available yet. Please contact support to settle this invoice."
+	},
+	"accountSummary": {
+		"balance": "Balance",
+		"amountDue": "Amount due",
+		"nextBilling": "Next billing"
+	},
+	"checkoutLink": {
+		"copy": "Copy link",
+		"copied": "Link copied",
+		"copyFailed": "Could not copy the link",
+		"paymentTitle": "Complete your payment",
+		"paymentDescription": "If the payment page didn't open, use the link below.",
+		"paymentOpen": "Open payment page",
+		"setupTitle": "Add your card",
+		"setupDescription": "If the secure card form didn't open, use the link below.",
+		"setupOpen": "Open card form"
+	},
+	"checkoutReturn": {
+		"completed": "Payment complete — your balance has been updated.",
+		"failed": "Payment was not completed.",
+		"expired": "That payment session expired. Please try again."
+	},
+	"paymentProviders": {
+		"chargebee": "Chargebee",
+		"razorpay": "Razorpay",
+		"stripe": "Stripe",
+		"nomod": "Nomod",
+		"moyasar": "Moyasar",
+		"paddle": "Paddle",
+		"whop": "Whop"
+	},
+	"section": {
+		"emptyTitle": "Nothing to show here",
+		"emptyDescription": "This section has no content configured yet."
+	},
+	"usageFilters": {
+		"groupBy": "Group by",
+		"groupByKey": "Group by: {{key}}",
+		"noGrouping": "None",
+		"filter": "Filter",
+		"filterCount": "Filter ({{count}})",
+		"allFeatures": "All features",
+		"featureCount_one": "{{count}} feature",
+		"featureCount_other": "{{count}} features",
+		"searchFeatures": "Search features",
+		"searchProperties": "Search properties",
+		"searchValues": "Search values",
+		"noResults": "No results",
+		"noValues": "No values found",
+		"loading": "Loading…",
+		"apply": "Apply",
+		"back": "Back",
+		"clearAll": "Clear all",
+		"removeFilter": "Remove {{key}} filter",
+		"noValue": "(none)",
+		"other": "Other"
+	}
+}

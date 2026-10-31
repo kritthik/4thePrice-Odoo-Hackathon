@@ -1,0 +1,30 @@
+/* Hide the default Intercom launcher completely */
+#intercom-launcher,
+.intercom-launcher,
+[data-testid='intercom-launcher'],
+.intercom-launcher-frame,
+.intercom-launcher-frame iframe,
+.intercom-launcher-frame .intercom-launcher-frame {
+	display: none !important;
+	visibility: hidden !important;
+	opacity: 0 !important;
+	pointer-events: none !important;
+	position: absolute !important;
+	left: -9999px !important;
+	top: -9999px !important;
+}
+
+/* Ensure Intercom messenger can still be shown programmatically */
+.intercom-messenger,
+#intercom-container,
+.intercom-messenger-frame {
+	display: block !important;
+	visibility: visible !important;
+	opacity: 1 !important;
+	pointer-events: auto !important;
+}
+
+/* Custom styling for your IntercomMessenger component */
+.intercom-messenger-button {
+	/* Add any custom styling for your help button here */
+}

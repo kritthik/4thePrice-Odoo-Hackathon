@@ -1,0 +1,259 @@
+import { useEffect, useMemo } from 'react';
+import { useParams } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { Button, Card } from '@/components/atoms';
+import { EventsTable, QueryBuilder, EventsLoadError } from '@/components/molecules';
+import CustomerApi from '@/api/CustomerApi';
+import { Skeleton } from '@/components/ui/skeleton';
+import { RefreshCw } from 'lucide-react';
+import {
+	FilterField,
+	FilterFieldType,
+	DEFAULT_OPERATORS_PER_DATA_TYPE,
+	DataType,
+	FilterOperator,
+	SortOption,
+	SortDirection,
+} from '@/types/common/QueryBuilder';
+import useFilterSorting from '@/hooks/useFilterSorting';
+import usePagination from '@/hooks/usePagination';
+import useEventsPagination from '@/hooks/useEventsPagination';
+import { TypedBackendFilter } from '@/types/formatters/QueryBuilder';
+import { GetEventsPayload } from '@/types/dto/Events';
+import EmptyState from '@/components/customer-portal/EmptyState';
+import { useTranslation } from 'react-i18next';
+
+// Helper function to convert sanitized filters to Events API parameters
+const convertFiltersToEventParams = (filters: TypedBackendFilter[]): Partial<GetEventsPayload> => {
+	const params: Partial<GetEventsPayload> = {};
+
+	filters.forEach((filter) => {
+		switch (filter.field) {
+			case 'event_id':
+				if (filter.value.string) {
+					params.event_id = filter.value.string;
+				}
+				break;
+			case 'event_name':
+				if (filter.value.string) {
+					params.event_name = filter.value.string;
+				}
+				break;
+			case 'start_time':
+				if (filter.value.date) {
+					params.start_time = filter.value.date;
+				}
+				break;
+			case 'end_time':
+				if (filter.value.date) {
+					params.end_time = filter.value.date;
+				}
+				break;
+			case 'source':
+				if (filter.value.string) {
+					params.source = filter.value.string;
+				}
+				break;
+		}
+	});
+
+	return params;
+};
+
+const CustomerUsageEventsTab = () => {
+	const { t } = useTranslation('customers');
+	const { t: tDev } = useTranslation('developers');
+	const { id: customerId } = useParams();
+	const { reset } = usePagination();
+
+	const sortingOptions: SortOption[] = useMemo(
+		() => [
+			{
+				field: 'created_at',
+				label: tDev('events.queryBuilder.sort.createdAt'),
+				direction: SortDirection.DESC,
+			},
+			{
+				field: 'updated_at',
+				label: tDev('events.queryBuilder.sort.updatedAt'),
+				direction: SortDirection.DESC,
+			},
+		],
+		[tDev],
+	);
+
+	const filterOptions: FilterField[] = useMemo(
+		() => [
+			{
+				field: 'event_id',
+				label: tDev('events.queryBuilder.filters.eventId'),
+				fieldType: FilterFieldType.INPUT,
+				operators: DEFAULT_OPERATORS_PER_DATA_TYPE[DataType.STRING],
+				dataType: DataType.STRING,
+			},
+			{
+				field: 'event_name',
+				label: tDev('events.queryBuilder.filters.eventName'),
+				fieldType: FilterFieldType.INPUT,
+				operators: DEFAULT_OPERATORS_PER_DATA_TYPE[DataType.STRING],
+				dataType: DataType.STRING,
+			},
+			{
+				field: 'source',
+				label: tDev('events.queryBuilder.filters.source'),
+				fieldType: FilterFieldType.INPUT,
+				operators: DEFAULT_OPERATORS_PER_DATA_TYPE[DataType.STRING],
+				dataType: DataType.STRING,
+			},
+			{
+				field: 'start_time',
+				label: tDev('events.queryBuilder.filters.startTime'),
+				fieldType: FilterFieldType.DATEPICKER,
+				operators: [FilterOperator.AFTER],
+				dataType: DataType.DATE,
+			},
+			{
+				field: 'end_time',
+				label: tDev('events.queryBuilder.filters.endTime'),
+				fieldType: FilterFieldType.DATEPICKER,
+				operators: [FilterOperator.BEFORE],
+				dataType: DataType.DATE,
+			},
+		],
+		[tDev],
+	);
+
+	const { data: customer, isLoading: customerLoading } = useQuery({
+		queryKey: ['fetchCustomerDetails', customerId],
+		queryFn: () => CustomerApi.getCustomerById(customerId!),
+		enabled: !!customerId,
+	});
+
+	const initialFilters = useMemo(() => {
+		return [
+			{
+				field: 'event_id',
+				operator: FilterOperator.EQUAL,
+				valueString: '',
+				dataType: DataType.STRING,
+				id: 'initial-event-id',
+			},
+			{
+				field: 'event_name',
+				operator: FilterOperator.EQUAL,
+				valueString: '',
+				dataType: DataType.STRING,
+				id: 'initial-event-name',
+			},
+			{
+				field: 'source',
+				operator: FilterOperator.EQUAL,
+				valueString: '',
+				dataType: DataType.STRING,
+				id: 'initial-source',
+			},
+			{
+				field: 'start_time',
+				operator: FilterOperator.AFTER,
+				valueDate: new Date(new Date().setDate(new Date().getDate() - 30)),
+				dataType: DataType.DATE,
+				id: 'initial-start-time',
+			},
+		];
+	}, []);
+
+	const initialSorts: SortOption[] = useMemo(
+		() => [
+			{
+				field: 'updated_at',
+				label: tDev('events.queryBuilder.sort.updatedAt'),
+				direction: SortDirection.DESC,
+			},
+		],
+		[tDev],
+	);
+
+	const { filters, sorts, setFilters, setSorts, sanitizedFilters, sanitizedSorts } = useFilterSorting({
+		initialFilters: initialFilters,
+		initialSorts,
+		debounceTime: 300,
+	});
+
+	// Convert sanitized filters to API parameters and always include external_customer_id
+	const apiParams = useMemo(() => {
+		const paramsFromFilters = convertFiltersToEventParams(sanitizedFilters);
+		return {
+			...paramsFromFilters,
+			external_customer_id: customer?.external_id,
+		};
+	}, [sanitizedFilters, customer?.external_id]);
+
+	// external_id is a hard precondition: every page is scoped to this customer, so there is
+	// nothing meaningful to request until it has loaded.
+	const { events, loading, hasMore, error, isRateLimited, sentinelRef, refresh, retry } = useEventsPagination({
+		params: apiParams,
+		enabled: !!customer?.external_id,
+	});
+
+	// Reset pagination when filters change
+	useEffect(() => {
+		reset();
+	}, [sanitizedFilters, sanitizedSorts]);
+
+	if (customerLoading) {
+		return (
+			<div className='space-y-6'>
+				<Card className='bg-surface border border-line-hairline rounded-xl p-6'>
+					<div className='animate-pulse space-y-4'>
+						<div className='h-10 bg-surface-muted rounded' />
+						<div className='h-12 bg-surface-muted rounded' />
+						<div className='h-12 bg-surface-muted rounded' />
+					</div>
+				</Card>
+			</div>
+		);
+	}
+
+	if (!customer?.external_id) {
+		return (
+			<Card className='bg-surface border border-line-hairline rounded-xl p-6'>
+				<EmptyState title={t('tabPanels.usageEvents.loadErrorTitle')} description={t('tabPanels.usageEvents.loadErrorDescription')} />
+			</Card>
+		);
+	}
+
+	return (
+		<>
+			<div className='bg-surface rounded-md flex items-start gap-4'>
+				<QueryBuilder
+					filterOptions={filterOptions}
+					filters={filters}
+					onFilterChange={setFilters}
+					sortOptions={sortingOptions}
+					onSortChange={setSorts}
+					selectedSorts={sorts}
+				/>
+				<Button variant='outline' onClick={refresh}>
+					<RefreshCw />
+				</Button>
+			</div>
+			<div className='bg-surface rounded-md '>
+				<EventsTable data={events} />
+				<div ref={sentinelRef} />
+				{loading && (
+					<div className='space-y-4 mt-4'>
+						<Skeleton className='h-8 w-full' />
+						<Skeleton className='h-8 w-full' />
+						<Skeleton className='h-8 w-full' />
+					</div>
+				)}
+				{!loading && error && <EventsLoadError message={error} isRateLimited={isRateLimited} onRetry={retry} />}
+				{!hasMore && !error && events.length === 0 && (
+					<p className=' text-content-slate-muted text-xs font-normal font-sans mt-4'>{t('tabPanels.usageEvents.noEventsFound')}</p>
+				)}
+			</div>
+		</>
+	);
+};
+
+export default CustomerUsageEventsTab;

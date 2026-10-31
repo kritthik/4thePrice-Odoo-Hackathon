@@ -1,0 +1,37 @@
+import { BILLING_PERIOD } from '@/constants/constants';
+import type { CommitmentTimeBucket } from './CommitmentTimeBucket';
+
+export enum CommitmentType {
+	AMOUNT = 'amount',
+	QUANTITY = 'quantity',
+}
+
+export interface LineItemCommitmentConfig {
+	// CommitmentAmount is the minimum amount committed for this line item
+	commitment_amount?: number;
+
+	// CommitmentQuantity is the minimum quantity committed for this line item
+	commitment_quantity?: number;
+
+	// CommitmentType specifies whether commitment is based on amount or quantity
+	commitment_type?: CommitmentType;
+
+	// OverageFactor is a multiplier applied to usage beyond the commitment
+	overage_factor?: number;
+
+	// EnableTrueUp determines if true-up fee should be applied when usage is below commitment
+	enable_true_up?: boolean;
+
+	// IsWindowCommitment determines if commitment is applied per window (e.g., per day) rather than per billing period
+	is_window_commitment?: boolean;
+
+	// CommitmentDuration specifies the duration period for the commitment (e.g., ANNUAL, MONTHLY)
+	// If not set, defaults to the subscription's billing period
+	commitment_duration?: BILLING_PERIOD;
+
+	// CommitmentTimeBuckets restricts commitment application to specific UTC time-of-day windows.
+	// Requires is_window_commitment=true.
+	commitment_time_buckets?: CommitmentTimeBucket[];
+}
+
+export type LineItemCommitmentsMap = Record<string, LineItemCommitmentConfig>;

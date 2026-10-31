@@ -1,0 +1,207 @@
+import { AddAddonToSubscriptionRequest } from '@/types/dto/Addon';
+import React, { useCallback, useMemo, useState, memo } from 'react';
+import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
+import { AddButton, FormHeader, ActionButton } from '@/components/atoms';
+import FlexpriceTable, { ColumnData } from '../Table';
+import SubscriptionAddonModal from './SubscriptionAddonModal';
+import { useQuery } from '@tanstack/react-query';
+import AddonApi from '@/api/AddonApi';
+import { BILLING_PERIOD } from '@/constants/constants';
+import { ExtendedPriceOverride } from '@/utils/common/price_override_helpers';
+import { Coupon } from '@/models/Coupon';
+import { filterAddonPricesForSubscription } from '@/utils/subscription/addon_commitment_helpers';
+import { formatAddonCharges, formatAddonQuantityDisplay } from '@/utils/subscription/addonQuantity';
+
+interface Props {
+	data: AddAddonToSubscriptionRequest[];
+	onChange: (data: AddAddonToSubscriptionRequest[]) => void;
+	disabled?: boolean;
+	priceOverrides?: Record<string, ExtendedPriceOverride>;
+	coupons?: Coupon[];
+	billingPeriod?: BILLING_PERIOD;
+	/** Subscription's billing_period_count paired with billingPeriod for the cadence-compat filter. Defaults to 1. */
+	billingPeriodCount?: number;
+	currency?: string;
+}
+
+interface ExtendedAddon extends AddAddonToSubscriptionRequest {
+	internal_id: number;
+}
+
+const SubscriptionAddonTable: React.FC<Props> = ({
+	data,
+	onChange,
+	disabled,
+	priceOverrides = {},
+	coupons = [],
+	billingPeriod,
+	billingPeriodCount = 1,
+	currency,
+}) => {
+	const { t } = useTranslation('common');
+	const [isOpen, setIsOpen] = useState(false);
+	const [selectedAddon, setSelectedAddon] = useState<ExtendedAddon | null>(null);
+	const extendedData = useMemo(() => {
+		return data.map((addon, index) => ({
+			...addon,
+			internal_id: index,
+		}));
+	}, [data]);
+
+	const { data: addons = [] } = useQuery({
+		queryKey: ['addons'],
+		queryFn: async () => {
+			const response = await AddonApi.List({ limit: 1000, offset: 0 });
+			return response.items;
+		},
+		staleTime: 5 * 60 * 1000,
+		refetchOnWindowFocus: false,
+	});
+
+	const addonsById = useMemo(() => {
+		return addons.reduce<Record<string, (typeof addons)[number]>>((acc, addon) => {
+			acc[addon.id] = addon;
+			return acc;
+		}, {});
+	}, [addons]);
+
+	const getAddonDetails = useCallback((addonId: string) => addonsById[addonId], [addonsById]);
+
+	const handleSave = useCallback(
+		(newAddons: AddAddonToSubscriptionRequest[]) => {
+			if (selectedAddon) {
+				// Editing replaces that one instance (the modal returns exactly one addon)
+				const [edited] = newAddons;
+				onChange(extendedData.map(({ internal_id, ...rest }) => (internal_id === selectedAddon.internal_id && edited ? edited : rest)));
+			} else {
+				// Adding appends every addon staged in the modal
+				onChange([...data, ...newAddons]);
+			}
+			setSelectedAddon(null);
+		},
+		[data, extendedData, onChange, selectedAddon],
+	);
+
+	const handleDelete = useCallback(
+		async (internalId: number) => {
+			const filteredData = extendedData.filter((addon) => addon.internal_id !== internalId);
+			// Strip internal_id before passing to parent
+			onChange(filteredData.map(({ internal_id, ...rest }) => rest));
+			// Toast here, not in ActionButton: removing re-indexes the rows, so by the time its
+			// onSuccess runs that row already shows the next addon's name.
+			toast.success(t('subscriptionAddon.removedSuccess'));
+		},
+		[extendedData, onChange, t],
+	);
+
+	const handleEdit = useCallback((addon: ExtendedAddon) => {
+		setSelectedAddon(addon);
+		setIsOpen(true);
+	}, []);
+
+	const handleOpenCreate = useCallback(() => {
+		setSelectedAddon(null);
+		setIsOpen(true);
+	}, []);
+
+	const columns: ColumnData<ExtendedAddon>[] = useMemo(
+		() => [
+			{
+				title: t('subscriptionAddon.columnName'),
+				render: (row) => {
+					const addonDetails = getAddonDetails(row.addon_id);
+					return addonDetails?.name || row.addon_id;
+				},
+			},
+			{
+				title: t('subscriptionAddon.columnQuantity'),
+				render: (row) => {
+					const addonDetails = getAddonDetails(row.addon_id);
+					const prices = filterAddonPricesForSubscription(addonDetails?.prices || [], billingPeriod, currency, billingPeriodCount);
+					return formatAddonQuantityDisplay(prices, row.override_line_items ?? [], t('subscriptionAddon.quantityUsage'));
+				},
+			},
+			{
+				title: t('subscriptionAddon.columnCharges'),
+				render: (row) => {
+					const addonDetails = getAddonDetails(row.addon_id);
+					const prices = filterAddonPricesForSubscription(addonDetails?.prices || [], billingPeriod, currency, billingPeriodCount);
+					// Per-addon overrides (amount + quantity) live on the row; plan-level
+					// `priceOverrides` never covers addon catalogue price ids.
+					return (
+						<span>
+							{formatAddonCharges(prices, row.override_line_items ?? [], priceOverrides, coupons, {
+								empty: t('labels.na'),
+								dependsOnUsage: t('subscriptionAddon.dependsOnUsage'),
+							})}
+						</span>
+					);
+				},
+			},
+			// {
+			// 	title: 'Start Date',
+			// 	render: (row) => (row.start_date ? new Date(row.start_date).toLocaleDateString() : '--'),
+			// },
+			// {
+			// 	title: 'End Date',
+			// 	render: (row) => (row.end_date ? new Date(row.end_date).toLocaleDateString() : '--'),
+			// },
+			{
+				fieldVariant: 'interactive',
+				hideOnEmpty: true,
+				render: (row) => {
+					const addonDetails = getAddonDetails(row.addon_id);
+					return (
+						<ActionButton
+							id={row.addon_id}
+							copyId={{ entityType: 'Addon' }}
+							deleteMutationFn={() => handleDelete(row.internal_id)}
+							disableToast
+							refetchQueryKey='addons'
+							entityName={addonDetails?.name || row.addon_id}
+							edit={{
+								enabled: !disabled,
+								onClick: () => handleEdit(row),
+							}}
+							archive={{
+								enabled: !disabled,
+								text: t('subscriptionAddon.remove'),
+							}}
+						/>
+					);
+				},
+			},
+		],
+		[disabled, getAddonDetails, handleDelete, handleEdit, priceOverrides, coupons, billingPeriod, billingPeriodCount, currency, t],
+	);
+
+	return (
+		<>
+			<SubscriptionAddonModal
+				data={selectedAddon || undefined}
+				isOpen={isOpen}
+				onOpenChange={setIsOpen}
+				onSave={handleSave}
+				onCancel={() => {
+					setIsOpen(false);
+					setSelectedAddon(null);
+				}}
+				billingPeriod={billingPeriod}
+				billingPeriodCount={billingPeriodCount}
+				currency={currency}
+			/>
+			<div className='space-y-4'>
+				<div className='flex items-center justify-between'>
+					<FormHeader className='mb-0' title={t('labels.addons')} variant='sub-header' />
+					<AddButton onClick={handleOpenCreate} disabled={disabled} />
+				</div>
+				<div className='rounded-[6px] border border-line-strong'>
+					<FlexpriceTable data={extendedData} columns={columns} showEmptyRow />
+				</div>
+			</div>
+		</>
+	);
+};
+
+export default memo(SubscriptionAddonTable);

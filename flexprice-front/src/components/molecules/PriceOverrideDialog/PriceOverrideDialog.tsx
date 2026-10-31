@@ -1,0 +1,817 @@
+import { FC, useState, useEffect, useMemo } from 'react';
+import toast from 'react-hot-toast';
+import { Dialog } from '@/components/atoms';
+import { Input, Button, Select, SelectOption, DatePicker } from '@/components/atoms';
+import { Price, BILLING_MODEL, TIER_MODE, CreatePriceTier, TransformQuantity, PRICE_TYPE, PRICE_UNIT_TYPE } from '@/models/Price';
+import { PriceBucketSize } from '@/models/Meter';
+import { removeFormatting } from '@/components/atoms/Input/Input';
+import { getCurrencySymbol } from '@/utils/common/helper_functions';
+import { BUCKET_SIZE_NONE, priceBucketSizeOptionsWithNone } from '@/constants/constants';
+import { ExtendedPriceOverride } from '@/utils/common/price_override_helpers';
+import VolumeTieredPricingForm from '@/components/organisms/PlanForm/VolumeTieredPricingForm';
+import { PremiumFeatureIcon } from '../PremiumFeature/PremiumFeature';
+import { decimalAmountToPercentage, isPercentagePrice, percentageToDecimalAmount } from '@/utils/common/percentage_price_helpers';
+import { formatPriceDisplay, normalizePriceDisplay } from '@/utils/common/price_helpers';
+import { useTranslation } from 'react-i18next';
+import type { LineItem } from '@/models/Subscription';
+import type { UpdateSubscriptionLineItemRequest } from '@/types/dto/Subscription';
+import SubscriptionChargeCommitmentSection, {
+	DEFAULT_SUBSCRIPTION_CHARGE_COMMITMENT_STATE,
+	type SubscriptionChargeCommitmentState,
+} from '@/components/organisms/Subscription/SubscriptionChargeCommitmentSection';
+import {
+	buildLineItemCommitmentUpdatePayload,
+	formatWindowCommitmentError,
+	lineItemWindowCommitmentStateFromBuckets,
+} from '@/utils/subscription/subscription_line_item_commitment_helpers';
+import { resolveBucketSize } from '@/utils/common/commitment_helpers';
+import { billingModelSelectValueFromPrice } from '@/utils/common/commitment_time_bucket_draft';
+import { useCommitmentTimeBucketPrices } from '@/hooks/useCommitmentTimeBucketPrices';
+import { useMeterForCommitment } from '@/hooks/useMeterForCommitment';
+import { convertPriceOverrideToLineItemUpdate } from '@/utils/subscription/priceOverrideToLineItemUpdate';
+
+interface Props {
+	isOpen: boolean;
+	onOpenChange: (isOpen: boolean) => void;
+	price: Price;
+	onPriceOverride: (priceId: string, override: Partial<ExtendedPriceOverride>) => void;
+	onResetOverride: (priceId: string) => void;
+	overriddenPrices: Record<string, ExtendedPriceOverride>;
+	showEffectiveFrom?: boolean; // Optional prop to conditionally show effective_from date
+	/** When set (subscription line item edit), shows window commitment and merges into line item update. */
+	lineItem?: LineItem;
+	onLineItemUpdate?: (updateData: UpdateSubscriptionLineItemRequest) => void | Promise<void>;
+	isSaving?: boolean;
+}
+
+/**
+ * Seeds the amount field from a stored amount. A percentage charge stores the decimal equivalent
+ * ("0.025"), so the field has to show the percentage it stands for ("2.5") instead.
+ */
+const toAmountFieldValue = (stored: string | undefined, asPercentage: boolean): string =>
+	asPercentage ? decimalAmountToPercentage(stored || '') : (stored ?? '');
+
+const PriceOverrideDialog: FC<Props> = ({
+	isOpen,
+	onOpenChange,
+	price,
+	onPriceOverride,
+	onResetOverride,
+	overriddenPrices,
+	showEffectiveFrom = false,
+	lineItem,
+	onLineItemUpdate,
+	isSaving = false,
+}) => {
+	const { t } = useTranslation('catalog');
+	const { t: tBilling } = useTranslation('billing');
+	const meterId = lineItem?.meter_id || lineItem?.price?.meter_id || price.meter_id;
+	// The embedded price often carries only meter_id — fetch the meter so bucket-size
+	// resolution (and the window-commitment gate) can see meter-level bucketing.
+	const { meter: commitmentMeter } = useMeterForCommitment(meterId, price.meter ?? lineItem?.price?.meter ?? null);
+	const { bucketsWithPrices, isLoading: isLoadingBucketPrices } = useCommitmentTimeBucketPrices(
+		isOpen && lineItem ? lineItem.commitment_time_buckets : undefined,
+	);
+	const [commitmentState, setCommitmentState] = useState<SubscriptionChargeCommitmentState>(DEFAULT_SUBSCRIPTION_CHARGE_COMMITMENT_STATE);
+	const [initialCommitmentState, setInitialCommitmentState] = useState<SubscriptionChargeCommitmentState>(
+		DEFAULT_SUBSCRIPTION_CHARGE_COMMITMENT_STATE,
+	);
+
+	useEffect(() => {
+		if (isOpen && lineItem && !isLoadingBucketPrices) {
+			const state = lineItemWindowCommitmentStateFromBuckets(lineItem, bucketsWithPrices);
+			setCommitmentState(state);
+			setInitialCommitmentState(state);
+		}
+	}, [isOpen, lineItem, bucketsWithPrices, isLoadingBucketPrices]);
+
+	const billingModelOptions: SelectOption[] = useMemo(
+		() => [
+			{ label: t('priceDialogs.billingModels.flatFee'), value: BILLING_MODEL.FLAT_FEE },
+			{ label: t('priceDialogs.billingModels.package'), value: BILLING_MODEL.PACKAGE },
+			{ label: t('priceDialogs.billingModels.volumeTiered'), value: BILLING_MODEL.TIERED },
+			{ label: t('priceDialogs.billingModels.slabTiered'), value: 'SLAB_TIERED' },
+		],
+		[t],
+	);
+
+	const [overrideAmount, setOverrideAmount] = useState('');
+	const [overrideQuantity, setOverrideQuantity] = useState<number | undefined>(undefined);
+	const [overrideBillingModel, setOverrideBillingModel] = useState<BILLING_MODEL | 'SLAB_TIERED'>(billingModelSelectValueFromPrice(price));
+	const [overrideTierMode, setOverrideTierMode] = useState<TIER_MODE>(price.tier_mode || TIER_MODE.VOLUME);
+	const [overrideTiers, setOverrideTiers] = useState<CreatePriceTier[]>([]);
+	const [overrideTransformQuantity, setOverrideTransformQuantity] = useState<TransformQuantity>({
+		divide_by: 1,
+	});
+	const [effectiveFrom, setEffectiveFrom] = useState<Date | undefined>(undefined);
+	const [isOverridden, setIsOverridden] = useState(false);
+	const [overrideBucketSize, setOverrideBucketSize] = useState<PriceBucketSize | ''>(
+		(price.bucket_size as PriceBucketSize | undefined) ?? '',
+	);
+	// The API rejects a price defining its own bucket_size when the meter already carries one
+	// ("meter already defines a bucket size") - disable the override instead of surfacing that as a 400.
+	const meterBucketSize = price.meter?.aggregation?.bucket_size ?? commitmentMeter?.aggregation?.bucket_size;
+	// An empty selector on a price that HAD a bucket size is an explicit clear (submitted as
+	// BUCKET_SIZE_NONE). Commitment validation/normalization must then see "no bucket" — falling
+	// back to the price's old effective bucket would normalize time buckets for a removed size.
+	const bucketExplicitlyCleared = overrideBucketSize === '' && Boolean(price.bucket_size);
+	// null (not undefined): buildLineItemCommitmentUpdatePayload treats undefined as
+	// "resolve from the line item's price", which would validate against the removed bucket.
+	const effectiveBucketSizeForCommitment = bucketExplicitlyCleared
+		? null
+		: overrideBucketSize || resolveBucketSize(price) || commitmentMeter?.aggregation?.bucket_size || undefined;
+
+	// Detect price unit type
+	const isCustomPriceUnit = price.price_unit_type === PRICE_UNIT_TYPE.CUSTOM;
+
+	// A percentage charge is a FLAT_FEE tagged in the price's metadata. An override can't change that
+	// metadata, so the amount field only reads as a percentage while the model stays on the price's
+	// own - switching to PACKAGE/TIERED here makes the override a plain currency-priced charge.
+	const isPercentage = isPercentagePrice(price);
+	const showAsPercentage = isPercentage && overrideBillingModel === price.billing_model;
+
+	/** Strips input formatting and, while the field reads as a percentage, converts 2.5 -> "0.025". */
+	const resolveStoredAmount = (value: string): string => {
+		const raw = removeFormatting(value);
+		return showAsPercentage ? percentageToDecimalAmount(raw) : raw;
+	};
+
+	// Check if this price is currently overridden
+	useEffect(() => {
+		const currentOverride = overriddenPrices[price.id];
+		const isCurrentlyOverridden = currentOverride !== undefined;
+		setIsOverridden(isCurrentlyOverridden);
+
+		if (isCurrentlyOverridden) {
+			// Initialize from override or original price based on price unit type
+			if (isCustomPriceUnit) {
+				setOverrideAmount(
+					toAmountFieldValue(
+						currentOverride.price_unit_amount || price.price_unit_amount || price.price_unit_config?.amount || '',
+						isPercentage,
+					),
+				);
+				setOverrideTiers(currentOverride.price_unit_tiers || price.price_unit_tiers || []);
+			} else {
+				setOverrideAmount(toAmountFieldValue(currentOverride.amount || price.amount, isPercentage));
+				setOverrideTiers(currentOverride.tiers || price.tiers || []);
+			}
+			setOverrideQuantity(currentOverride.quantity);
+			setOverrideBillingModel(currentOverride.billing_model || billingModelSelectValueFromPrice(price));
+			setOverrideTierMode(currentOverride.tier_mode || price.tier_mode || TIER_MODE.VOLUME);
+			setOverrideTransformQuantity(currentOverride.transform_quantity || { divide_by: 1, round: 'up' });
+			if (showEffectiveFrom && currentOverride.effective_from) {
+				setEffectiveFrom(new Date(currentOverride.effective_from));
+			}
+			setOverrideBucketSize(
+				(currentOverride.bucket_size === BUCKET_SIZE_NONE ? '' : currentOverride.bucket_size) ??
+					(price.bucket_size as PriceBucketSize | undefined) ??
+					'',
+			);
+		} else {
+			// Prefill with original price values
+			setOverrideQuantity(1); // Default quantity for usage-based prices
+			setOverrideBillingModel(billingModelSelectValueFromPrice(price));
+			setOverrideTierMode(price.tier_mode || TIER_MODE.VOLUME);
+
+			// Initialize amount and tiers based on price unit type
+			if (isCustomPriceUnit) {
+				const initialAmount = price.price_unit_amount || price.price_unit_config?.amount || '';
+				setOverrideAmount(toAmountFieldValue(initialAmount, isPercentage));
+
+				// Initialize with original price_unit_tiers if they exist, otherwise start with one default tier
+				if (price.price_unit_tiers && price.price_unit_tiers.length > 0) {
+					setOverrideTiers(
+						price.price_unit_tiers.map((tier) => ({
+							unit_amount: tier.unit_amount,
+							flat_amount: tier.flat_amount || '0',
+							up_to: tier.up_to,
+						})),
+					);
+				} else {
+					// Start with one default tier
+					setOverrideTiers([
+						{
+							unit_amount: initialAmount, // Prefill with original amount
+							flat_amount: '0',
+							up_to: null,
+						},
+					]);
+				}
+			} else {
+				setOverrideAmount(toAmountFieldValue(price.amount, isPercentage));
+
+				// Initialize with original tiers if they exist, otherwise start with one default tier
+				if (price.tiers && price.tiers.length > 0) {
+					setOverrideTiers(
+						price.tiers.map((tier) => ({
+							unit_amount: tier.unit_amount,
+							flat_amount: tier.flat_amount || '0',
+							up_to: tier.up_to,
+						})),
+					);
+				} else {
+					// Start with one default tier
+					setOverrideTiers([
+						{
+							unit_amount: price.amount, // Prefill with original amount
+							flat_amount: '0',
+							up_to: null,
+						},
+					]);
+				}
+			}
+
+			// Prefill transform quantity with original value if it exists
+			setOverrideTransformQuantity(price.transform_quantity || { divide_by: 1, round: 'up' });
+			if (showEffectiveFrom) {
+				setEffectiveFrom(undefined);
+			}
+			setOverrideBucketSize((price.bucket_size as PriceBucketSize | undefined) ?? '');
+		}
+	}, [
+		price.id,
+		overriddenPrices,
+		price.billing_model,
+		price.tier_mode,
+		price.tiers,
+		price.amount,
+		price.transform_quantity,
+		price.price_unit_type,
+		price.price_unit_amount,
+		price.price_unit_tiers,
+		price.price_unit_config,
+		price.bucket_size,
+		showEffectiveFrom,
+		isCustomPriceUnit,
+		isPercentage,
+	]);
+
+	const buildPriceOverride = (): Partial<ExtendedPriceOverride> => {
+		const override: Partial<ExtendedPriceOverride> = {};
+		const sourceBillingModel = billingModelSelectValueFromPrice(price);
+		const billingModelChanged = overrideBillingModel !== sourceBillingModel;
+		// A switch sends the amount even if unchanged, except a tiered price's placeholder "0".
+		const sendAmountOnSwitch = billingModelChanged && sourceBillingModel !== BILLING_MODEL.TIERED && sourceBillingModel !== 'SLAB_TIERED';
+
+		// Handle amount/price_unit_amount based on price unit type and billing model
+		if (overrideBillingModel !== BILLING_MODEL.TIERED && overrideBillingModel !== 'SLAB_TIERED') {
+			const enteredAmount = overrideAmount ? resolveStoredAmount(overrideAmount) : '';
+			if (isCustomPriceUnit) {
+				// For CUSTOM prices, use price_unit_amount
+				const originalAmount = price.price_unit_amount || price.price_unit_config?.amount || '';
+				if (enteredAmount && (sendAmountOnSwitch || enteredAmount !== originalAmount)) {
+					override.price_unit_amount = enteredAmount;
+				}
+			} else {
+				// For FIAT prices, use amount
+				if (enteredAmount && (sendAmountOnSwitch || enteredAmount !== price.amount)) {
+					override.amount = enteredAmount;
+				}
+			}
+		}
+
+		// Quantity can be overridden for any billing model
+		if (overrideQuantity !== undefined) {
+			override.quantity = overrideQuantity;
+		}
+
+		// Billing model override. Compare against the resolved select-value (which maps TIERED + SLAB
+		// tier mode to 'SLAB_TIERED') rather than the raw price.billing_model, so a slab-tiered charge
+		// left untouched isn't reported as a billing-model change.
+		if (billingModelChanged) {
+			override.billing_model = overrideBillingModel;
+		}
+
+		// Tier mode override
+		if (overrideTierMode !== (price.tier_mode || TIER_MODE.VOLUME)) {
+			override.tier_mode = overrideTierMode;
+		}
+
+		// Handle tiers/price_unit_tiers based on price unit type and billing model
+		if ((overrideBillingModel === BILLING_MODEL.TIERED || overrideBillingModel === 'SLAB_TIERED') && overrideTiers.length > 0) {
+			if (isCustomPriceUnit) {
+				// For CUSTOM prices, use price_unit_tiers
+				override.price_unit_tiers = overrideTiers;
+			} else {
+				// For FIAT prices, use tiers
+				override.tiers = overrideTiers;
+			}
+		}
+
+		// Only include transform_quantity if billing model is package (same for both types)
+		if (overrideBillingModel === BILLING_MODEL.PACKAGE && overrideTransformQuantity !== undefined) {
+			override.transform_quantity = overrideTransformQuantity;
+		}
+
+		// Include effective_from if showEffectiveFrom is enabled
+		if (showEffectiveFrom && effectiveFrom) {
+			override.effective_from = effectiveFrom.toISOString();
+		}
+
+		// Bucket size override (USAGE prices only). BUCKET_SIZE_NONE signals an explicit clear - only
+		// meaningful when editing an existing subscription line item; getLineItemOverrides strips it
+		// before it reaches a subscription-create-time payload.
+		if (price.type === PRICE_TYPE.USAGE) {
+			const originalBucketSize = price.bucket_size ?? '';
+			if (overrideBucketSize !== originalBucketSize) {
+				override.bucket_size = overrideBucketSize || BUCKET_SIZE_NONE;
+			}
+		}
+
+		return override;
+	};
+
+	const hasCommitmentChanges = () => {
+		if (!lineItem) return false;
+		return JSON.stringify(commitmentState) !== JSON.stringify(initialCommitmentState);
+	};
+
+	const handleOverride = async () => {
+		const override = buildPriceOverride();
+
+		if (lineItem && onLineItemUpdate) {
+			const priceUpdate = convertPriceOverrideToLineItemUpdate(price.id, override);
+			// overrideBucketSize reflects this submission's pending bucket_size (changed or not) - use it
+			// instead of the line item's stale lineItem.price?.bucket_size so window-commitment validation
+			// and normalization match what actually gets sent. Falls back to the price's effective
+			// (price-then-meter) bucket size when the selector was never touched, so legacy
+			// meter-bucketed prices with no price-level bucket_size still validate correctly.
+			const commitmentResult = buildLineItemCommitmentUpdatePayload(commitmentState, lineItem, effectiveBucketSizeForCommitment);
+			if (!commitmentResult.ok) {
+				toast.error(formatWindowCommitmentError(commitmentResult.error, tBilling));
+				return;
+			}
+			const merged: UpdateSubscriptionLineItemRequest = { ...priceUpdate, ...commitmentResult.payload };
+			const hasPriceChanges = Object.keys(priceUpdate).length > 0;
+			if (!hasPriceChanges && !hasCommitmentChanges()) {
+				onOpenChange(false);
+				return;
+			}
+			try {
+				await onLineItemUpdate(merged);
+			} catch {
+				// Keep dialog open so the user can fix and retry.
+			}
+			return;
+		}
+
+		if (Object.keys(override).length > 0) {
+			// Overrides merge, so clear pricing fields an earlier edit set that this one doesn't.
+			const cleared = {
+				amount: undefined,
+				price_unit_amount: undefined,
+				billing_model: undefined,
+				tier_mode: undefined,
+				tiers: undefined,
+				price_unit_tiers: undefined,
+				transform_quantity: undefined,
+				bucket_size: undefined,
+			};
+			onPriceOverride(price.id, { ...cleared, ...override });
+		} else {
+			onResetOverride(price.id);
+		}
+		onOpenChange(false);
+	};
+
+	const handleReset = () => {
+		onResetOverride(price.id);
+		setOverrideQuantity(undefined);
+		setOverrideBillingModel(billingModelSelectValueFromPrice(price));
+
+		// Reset amount and tiers based on price unit type
+		if (isCustomPriceUnit) {
+			setOverrideAmount(toAmountFieldValue(price.price_unit_amount || price.price_unit_config?.amount || '', isPercentage));
+			if (price.price_unit_tiers && price.price_unit_tiers.length > 0) {
+				setOverrideTiers(
+					price.price_unit_tiers.map((tier) => ({
+						unit_amount: tier.unit_amount,
+						flat_amount: tier.flat_amount || '0',
+						up_to: tier.up_to,
+					})),
+				);
+			} else {
+				setOverrideTiers([
+					{
+						unit_amount: '',
+						flat_amount: '0',
+						up_to: null,
+					},
+				]);
+			}
+		} else {
+			setOverrideAmount(toAmountFieldValue(price.amount, isPercentage));
+			if (price.tiers && price.tiers.length > 0) {
+				setOverrideTiers(
+					price.tiers.map((tier) => ({
+						unit_amount: tier.unit_amount,
+						flat_amount: tier.flat_amount || '0',
+						up_to: tier.up_to,
+					})),
+				);
+			} else {
+				setOverrideTiers([
+					{
+						unit_amount: '',
+						flat_amount: '0',
+						up_to: null,
+					},
+				]);
+			}
+		}
+
+		// Reset transform_quantity to original value or default
+		setOverrideTransformQuantity(price.transform_quantity || { divide_by: 1, round: 'up' });
+		if (showEffectiveFrom) {
+			setEffectiveFrom(undefined);
+		}
+		setOverrideBucketSize((price.bucket_size as PriceBucketSize | undefined) ?? '');
+		setIsOverridden(false);
+	};
+
+	const handleCancel = () => {
+		const currentOverride = overriddenPrices[price.id];
+		if (currentOverride) {
+			// Restore from override based on price unit type
+			if (isCustomPriceUnit) {
+				setOverrideAmount(
+					toAmountFieldValue(
+						currentOverride.price_unit_amount || price.price_unit_amount || price.price_unit_config?.amount || '',
+						isPercentage,
+					),
+				);
+				setOverrideTiers(currentOverride.price_unit_tiers || price.price_unit_tiers || []);
+			} else {
+				setOverrideAmount(toAmountFieldValue(currentOverride.amount || price.amount, isPercentage));
+				setOverrideTiers(currentOverride.tiers || price.tiers || []);
+			}
+			setOverrideQuantity(currentOverride.quantity);
+			setOverrideBillingModel(currentOverride.billing_model || billingModelSelectValueFromPrice(price));
+			setOverrideTransformQuantity(currentOverride.transform_quantity || { divide_by: 1, round: 'up' });
+			if (showEffectiveFrom && currentOverride.effective_from) {
+				setEffectiveFrom(new Date(currentOverride.effective_from));
+			}
+			setOverrideBucketSize(
+				(currentOverride.bucket_size === BUCKET_SIZE_NONE ? '' : currentOverride.bucket_size) ??
+					(price.bucket_size as PriceBucketSize | undefined) ??
+					'',
+			);
+		} else {
+			// Reset to original values based on price unit type
+			if (isCustomPriceUnit) {
+				setOverrideAmount(toAmountFieldValue(price.price_unit_amount || price.price_unit_config?.amount || '', isPercentage));
+				if (price.price_unit_tiers && price.price_unit_tiers.length > 0) {
+					setOverrideTiers(
+						price.price_unit_tiers.map((tier) => ({
+							unit_amount: tier.unit_amount,
+							flat_amount: tier.flat_amount || '0',
+							up_to: tier.up_to,
+						})),
+					);
+				} else {
+					setOverrideTiers([
+						{
+							unit_amount: '',
+							flat_amount: '0',
+							up_to: null,
+						},
+					]);
+				}
+			} else {
+				setOverrideAmount(toAmountFieldValue(price.amount, isPercentage));
+				if (price.tiers && price.tiers.length > 0) {
+					setOverrideTiers(
+						price.tiers.map((tier) => ({
+							unit_amount: tier.unit_amount,
+							flat_amount: tier.flat_amount || '0',
+							up_to: tier.up_to,
+						})),
+					);
+				} else {
+					setOverrideTiers([
+						{
+							unit_amount: '',
+							flat_amount: '0',
+							up_to: null,
+						},
+					]);
+				}
+			}
+			setOverrideQuantity(undefined);
+			setOverrideBillingModel(billingModelSelectValueFromPrice(price));
+			// Reset to original transform_quantity or default
+			setOverrideTransformQuantity(price.transform_quantity || { divide_by: 1, round: 'up' });
+			if (showEffectiveFrom) {
+				setEffectiveFrom(undefined);
+			}
+			setOverrideBucketSize((price.bucket_size as PriceBucketSize | undefined) ?? '');
+		}
+		onOpenChange(false);
+	};
+
+	const hasChanges = () => {
+		// Check if billing model has changed (including SLAB_TIERED conversion)
+		const originalBillingModel = price.billing_model;
+		const originalTierMode = price.tier_mode || TIER_MODE.VOLUME;
+
+		let billingModelChanged: boolean;
+		if (overrideBillingModel === 'SLAB_TIERED' && originalBillingModel === BILLING_MODEL.TIERED && originalTierMode === TIER_MODE.SLAB) {
+			billingModelChanged = false; // Same as original
+		} else if (
+			overrideBillingModel === BILLING_MODEL.TIERED &&
+			originalBillingModel === BILLING_MODEL.TIERED &&
+			originalTierMode === TIER_MODE.VOLUME
+		) {
+			billingModelChanged = false; // Same as original
+		} else {
+			billingModelChanged = overrideBillingModel !== originalBillingModel;
+		}
+
+		// Compare amount/price_unit_amount based on price unit type
+		let amountChanged: boolean;
+		if (isCustomPriceUnit) {
+			const originalAmount = price.price_unit_amount || price.price_unit_config?.amount || '';
+			amountChanged = !!(overrideAmount && resolveStoredAmount(overrideAmount) !== originalAmount);
+		} else {
+			amountChanged = !!(overrideAmount && resolveStoredAmount(overrideAmount) !== price.amount);
+		}
+
+		// Compare tiers/price_unit_tiers based on price unit type
+		let tiersChanged = false;
+		if (isCustomPriceUnit) {
+			const originalTiers = price.price_unit_tiers || [];
+			if (originalTiers.length === 0 && overrideTiers.length > 0) {
+				tiersChanged = true;
+			} else if (originalTiers.length > 0) {
+				tiersChanged =
+					JSON.stringify(overrideTiers) !==
+					JSON.stringify(
+						originalTiers.map((tier) => ({
+							unit_amount: tier.unit_amount,
+							flat_amount: tier.flat_amount || '0',
+							up_to: tier.up_to,
+						})),
+					);
+			}
+		} else {
+			const originalTiers = price.tiers || [];
+			if (originalTiers.length === 0 && overrideTiers.length > 0) {
+				tiersChanged = true;
+			} else if (originalTiers.length > 0) {
+				tiersChanged =
+					JSON.stringify(overrideTiers) !==
+					JSON.stringify(
+						originalTiers.map((tier) => ({
+							unit_amount: tier.unit_amount,
+							flat_amount: tier.flat_amount || '0',
+							up_to: tier.up_to,
+						})),
+					);
+			}
+		}
+
+		const bucketSizeChanged = overrideBucketSize !== (price.bucket_size ?? '');
+
+		return (
+			amountChanged ||
+			overrideQuantity !== undefined ||
+			billingModelChanged ||
+			tiersChanged ||
+			overrideTransformQuantity !== undefined ||
+			(showEffectiveFrom && effectiveFrom !== undefined) ||
+			bucketSizeChanged
+		);
+	};
+
+	// Get display amount and symbol based on price unit type
+	const getDisplaySymbol = () => {
+		if (isCustomPriceUnit) {
+			// Try to get price unit symbol from pricing_unit if available (from PriceResponse)
+			// Otherwise fall back to price_unit_config.price_unit or price_unit
+			return price.price_unit_config?.price_unit || price.price_unit || price.currency;
+		}
+		return getCurrencySymbol(price.currency);
+	};
+
+	const displaySymbol = getDisplaySymbol();
+	const originalPriceDisplay = formatPriceDisplay(normalizePriceDisplay(price));
+	const chargeDisplayName = price.meter?.name || price.description || t('priceDialogs.thisChargeFallback');
+
+	const handleDialogOpenChange = (open: boolean) => {
+		if (!open && isSaving) return;
+		onOpenChange(open);
+	};
+
+	return (
+		<Dialog
+			isOpen={isOpen}
+			onOpenChange={handleDialogOpenChange}
+			title={
+				<div className='flex items-center gap-2'>
+					<span>{t('priceDialogs.overrideTitle')}</span>
+					<PremiumFeatureIcon side='right' align='center' sideOffset={10} />
+				</div>
+			}
+			description={t('priceDialogs.modifyPricingDescription', { name: chargeDisplayName })}
+			className={lineItem ? 'w-full max-w-4xl overflow-x-hidden ' : 'w-full max-w-lg sm:max-w-[32rem]'}>
+			<div className='space-y-6 min-w-0'>
+				<div className='space-y-4'>
+					{/* Original Price Display */}
+					<div className='flex items-center justify-between p-3 bg-surface-subtle rounded-lg'>
+						<div className='text-sm text-content-tertiary'>{t('priceDialogs.originalPrice')}</div>
+						<div className='font-medium'>{originalPriceDisplay}</div>
+					</div>
+
+					{/* Billing Model Override - Only show for USAGE price types */}
+					{price.type === PRICE_TYPE.USAGE && (
+						<div className='space-y-2'>
+							<label className='text-sm font-medium text-content-secondary'>{t('priceDialogs.billingModel')}</label>
+							<Select
+								value={overrideBillingModel}
+								onChange={(value) => setOverrideBillingModel(value as BILLING_MODEL)}
+								options={billingModelOptions}
+								placeholder={t('priceDialogs.selectBillingModel')}
+							/>
+						</div>
+					)}
+
+					{/* Bucket Size Override - Only show for USAGE price types */}
+					{price.type === PRICE_TYPE.USAGE && (
+						<div className='space-y-2'>
+							<label className='text-sm font-medium text-content-secondary'>{t('priceDialogs.bucketSize')}</label>
+							<Select
+								value={overrideBucketSize || BUCKET_SIZE_NONE}
+								onChange={(value) => setOverrideBucketSize(value === BUCKET_SIZE_NONE ? '' : (value as PriceBucketSize))}
+								options={priceBucketSizeOptionsWithNone}
+								placeholder={t('priceDialogs.bucketSizePlaceholder')}
+								disabled={!!meterBucketSize}
+								description={meterBucketSize ? t('priceDialogs.bucketSizeSetOnMeter', { bucketSize: meterBucketSize }) : undefined}
+							/>
+						</div>
+					)}
+
+					{/* Amount Override - only show if billing model is not TIERED or SLAB_TIERED */}
+					{overrideBillingModel !== BILLING_MODEL.TIERED && overrideBillingModel !== 'SLAB_TIERED' && (
+						<div className='space-y-2'>
+							<label className='text-sm font-medium text-content-secondary'>
+								{showAsPercentage
+									? t('priceDialogs.overridePercentageLabel')
+									: t('priceDialogs.overrideAmountLabel', { unit: isCustomPriceUnit ? displaySymbol : price.currency })}
+							</label>
+							<Input
+								type='formatted-number'
+								value={overrideAmount}
+								onChange={setOverrideAmount}
+								placeholder={showAsPercentage ? t('priceDialogs.enterNewPercentageOptional') : t('priceDialogs.enterNewAmountOptional')}
+								suffix={showAsPercentage ? '%' : displaySymbol}
+								className='w-full'
+							/>
+						</div>
+					)}
+
+					{/* Tiers Override - only show if billing model is TIERED or SLAB_TIERED */}
+					{(overrideBillingModel === BILLING_MODEL.TIERED || overrideBillingModel === 'SLAB_TIERED') && (
+						<div className='space-y-2'>
+							<label className='text-sm font-medium text-content-secondary'>{t('priceDialogs.tiers')}</label>
+							<VolumeTieredPricingForm
+								tieredPrices={
+									overrideTiers.length > 0
+										? overrideTiers.map((tier, index) => {
+												// Calculate proper from and up_to values
+												let from: number;
+												let up_to: number | null;
+
+												if (index === 0) {
+													from = 0;
+													up_to = overrideTiers[0]?.up_to || null;
+												} else {
+													from = overrideTiers[index - 1]?.up_to || 0;
+													up_to = overrideTiers[index]?.up_to || null;
+												}
+
+												return {
+													from,
+													up_to,
+													unit_amount: tier.unit_amount || '',
+													flat_amount: tier.flat_amount || '0',
+												};
+											})
+										: [{ from: 0, up_to: null, unit_amount: '', flat_amount: '0' }]
+								}
+								setTieredPrices={(setter) => {
+									// Handle both function and direct value cases
+									const newTiers =
+										typeof setter === 'function'
+											? setter(
+													overrideTiers.length > 0
+														? overrideTiers.map((tier, index) => ({
+																from: index === 0 ? 0 : overrideTiers[index - 1]?.up_to || 0,
+																up_to: tier.up_to || null,
+																unit_amount: tier.unit_amount || '',
+																flat_amount: tier.flat_amount || '0',
+															}))
+														: [{ from: 0, up_to: null, unit_amount: '', flat_amount: '0' }],
+												)
+											: setter;
+
+									// Convert the PriceTier format to CreatePriceTier format
+									// and properly handle the from/up_to values
+									const convertedTiers = newTiers.map((tier) => {
+										// Use the tier's own up_to value directly
+										return {
+											unit_amount: tier.unit_amount || '',
+											flat_amount: tier.flat_amount || '0',
+											up_to: tier.up_to,
+										};
+									});
+									setOverrideTiers(convertedTiers);
+								}}
+								currency={isCustomPriceUnit ? displaySymbol : price.currency}
+								tierMode={overrideBillingModel === BILLING_MODEL.TIERED ? TIER_MODE.VOLUME : TIER_MODE.SLAB}
+							/>
+						</div>
+					)}
+
+					{/* Transform Quantity Override - only show if billing model is PACKAGE */}
+					{overrideBillingModel === BILLING_MODEL.PACKAGE && (
+						<div className='space-y-4'>
+							<label className='text-sm font-medium text-content-secondary'>{t('priceDialogs.packageConfiguration')}</label>
+							<div className='space-y-2'>
+								<label className='text-sm text-content-tertiary'>{t('priceDialogs.unitsPerPackage')}</label>
+								<Input
+									type='number'
+									value={overrideTransformQuantity?.divide_by || ''}
+									onChange={(value) =>
+										setOverrideTransformQuantity({
+											...overrideTransformQuantity,
+											divide_by: Number(value) || 1,
+										})
+									}
+									placeholder={t('priceDialogs.enterUnitsPerPackage')}
+									className='w-full'
+								/>
+								{price.transform_quantity && (
+									<div className='text-xs text-content-muted'>
+										{t('priceDialogs.originalUnitsPerPackage', { count: price.transform_quantity.divide_by })}
+									</div>
+								)}
+							</div>
+						</div>
+					)}
+
+					{showEffectiveFrom && (
+						<div className='space-y-2'>
+							<DatePicker
+								label={t('priceDialogs.effectiveFromOptional')}
+								placeholder={t('priceDialogs.selectDateScheduledUpdate')}
+								date={effectiveFrom}
+								setDate={setEffectiveFrom}
+								className='w-full'
+							/>
+							<p className='text-xs text-content-muted'>{t('priceDialogs.schedulePriceChangeHint')}</p>
+						</div>
+					)}
+
+					{isOverridden && (
+						<div className='flex items-center gap-2 p-3 bg-info-muted border border-info-line rounded-lg'>
+							<div className='text-sm text-info-strong'>{t('priceDialogs.priceOverriddenNotice')}</div>
+						</div>
+					)}
+				</div>
+
+				{lineItem && (
+					<SubscriptionChargeCommitmentSection
+						meterId={meterId}
+						currency={lineItem.currency}
+						value={commitmentState}
+						onChange={setCommitmentState}
+						sourcePrice={lineItem.price}
+						sourceBucketSize={effectiveBucketSizeForCommitment}
+						disabled={isSaving}
+					/>
+				)}
+
+				<div className='flex gap-3 pt-4'>
+					<Button variant='outline' onClick={handleCancel} className='flex-1' disabled={isSaving}>
+						{t('priceDialogs.cancel')}
+					</Button>
+					{isOverridden && !lineItem && (
+						<Button variant='outline' onClick={handleReset} className='flex-1' disabled={isSaving}>
+							{t('priceDialogs.reset')}
+						</Button>
+					)}
+					<Button
+						onClick={handleOverride}
+						className='flex-1'
+						disabled={isSaving || (!hasChanges() && !hasCommitmentChanges())}
+						isLoading={isSaving}>
+						{lineItem || isOverridden ? t('priceDialogs.updateOverride') : t('priceDialogs.overridePrice')}
+					</Button>
+				</div>
+			</div>
+		</Dialog>
+	);
+};
+
+export default PriceOverrideDialog;

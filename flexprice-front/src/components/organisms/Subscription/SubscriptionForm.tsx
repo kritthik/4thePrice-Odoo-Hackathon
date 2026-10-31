@@ -1,0 +1,1321 @@
+import {
+	Select,
+	FormHeader,
+	Label,
+	DecimalUsageInput,
+	DatePicker,
+	Input,
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+	Tooltip,
+} from '@/components/atoms';
+import { Switch } from '@/components/ui';
+import { cn } from '@/lib/utils';
+import { toSentenceCase, getCurrencySymbol } from '@/utils/common/helper_functions';
+import { PlanResponse } from '@/types';
+import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
+import SubscriptionCreditGrantTable from '@/components/molecules/CreditGrant/SubscriptionCreditGrantTable';
+import { SubscriptionEntitlementGrantDraftTable } from '@/components/molecules/SubscriptionEntitlementsSection';
+import SubscriptionAddonTable from '@/components/molecules/SubscriptionAddonTable/SubscriptionAddonTable';
+import { BILLING_CYCLE } from '@/models/Subscription';
+import {
+	CREDIT_GRANT_CADENCE,
+	CREDIT_GRANT_EXPIRATION_TYPE,
+	CREDIT_GRANT_PERIOD,
+	CREDIT_GRANT_PERIOD_UNIT,
+	CREDIT_GRANT_SCOPE,
+	ENTITLEMENT_ENTITY_TYPE,
+	ENTITY_STATUS,
+	EXPAND,
+	Customer,
+	PRICE_ENTITY_TYPE,
+	PRICE_TYPE,
+} from '@/models';
+import { BILLING_PERIOD, PAYMENT_TERMS_NONE, paymentTermsOptions } from '@/constants/constants';
+import { SubscriptionFormState } from '@/pages';
+import { useQuery } from '@tanstack/react-query';
+import { usePlanPrices } from '@/hooks/usePlanPrices';
+import CreditGrantApi from '@/api/CreditGrantApi';
+import { PriceApi } from '@/api/PriceApi';
+import EntitlementApi from '@/api/EntitlementApi';
+import AddonApi from '@/api/AddonApi';
+import { SubscriptionDiscountTable, EntitlementOverridesTable } from '@/components/molecules';
+import { DataType, FilterOperator } from '@/types/common/QueryBuilder';
+import SubscriptionTaxAssociationTable from '@/components/molecules/SubscriptionTaxAssociationTable';
+import PhaseList from './PhaseList';
+import { SubscriptionPhaseCreateRequest, EntitlementOverrideRequest } from '@/types/dto/Subscription';
+import SubscriptionPriceTable from './SubscriptionPriceTable';
+import AddSubscriptionChargeDialog, { type AddedSubscriptionLineItem } from './AddSubscriptionChargeDialog';
+import type { LineItemCommitmentConfig } from '@/types/dto/LineItemCommitmentConfig';
+import type { CommitmentTimeBucket } from '@/types/dto/CommitmentTimeBucket';
+import { CustomerSearchSelect, InheritedCustomersTable } from '@/components/molecules/Customer';
+import { usePriceOverrides } from '@/hooks/usePriceOverrides';
+import { Coupon } from '@/models/Coupon';
+import { InternalCreditGrantRequest, creditGrantToInternal } from '@/types/dto/CreditGrant';
+import { uniqueId } from 'lodash';
+import { generateExpandQueryParams } from '@/utils/common/api_helper';
+import {
+	cadenceKey,
+	filterPlanPricesForSubscriptionCharges,
+	groupAdditionalPricesByCadence,
+	isOneTimePlanPrice,
+	partitionPricesForSubscription,
+	uniqueRecurringBillingPeriodsFromPrices,
+} from '@/utils/subscription/planPricesForSubscriptionUi';
+import { subscriptionHasSplittingCharge } from '@/utils/subscription/lineItemGrouping';
+import AdditionalPlanPricesSection from './AdditionalPlanPricesSection';
+import LineItemGroupingSection from './LineItemGroupingSection';
+import { Info } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import SubscriptionFxRateTable from '@/components/molecules/SubscriptionFxRateTable';
+import { useTenantFxRate } from '@/hooks/useTenantFxRate';
+import { useClearOnFxPairChange } from '@/hooks/useClearOnFxPairChange';
+import { canSetSubscriptionFxRates, resolveBillingCurrency } from '@/utils/fx/subscriptionFx';
+
+const BillingAccordionInfoTooltip = ({ description, ariaLabel }: { description: string; ariaLabel: string }) => (
+	<Tooltip
+		delayDuration={0}
+		side='top'
+		align='end'
+		sideOffset={6}
+		content={<span className='block max-w-xs text-xs font-normal leading-relaxed text-popover-foreground'>{description}</span>}
+		className='max-w-xs'>
+		<span
+			className='inline-flex size-[22px] shrink-0 items-center justify-center rounded-md text-content-zinc-subtle outline-none transition-colors hover:bg-surface-muted hover:text-content-zinc-tertiary focus-visible:ring-2 focus-visible:ring-line-zinc-bold/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface'
+			tabIndex={0}
+			aria-label={ariaLabel}
+			onPointerDown={(e) => e.stopPropagation()}
+			onClick={(e) => e.stopPropagation()}
+			onKeyDown={(e) => {
+				if (e.key === ' ' || e.key === 'Enter') e.stopPropagation();
+			}}>
+			<Info className='size-3.5' strokeWidth={1.5} aria-hidden />
+		</span>
+	</Tooltip>
+);
+
+// Helper components
+const BillingCycleSelector = ({
+	value,
+	onChange,
+	disabled,
+}: {
+	value: BILLING_CYCLE;
+	onChange: (value: BILLING_CYCLE) => void;
+	disabled?: boolean;
+}) => {
+	const { t } = useTranslation('customers');
+	const options = useMemo(
+		() => [
+			{ label: t('organisms.subscriptionForm.billingAnniversary'), value: BILLING_CYCLE.ANNIVERSARY },
+			{ label: t('organisms.subscriptionForm.billingCalendar'), value: BILLING_CYCLE.CALENDAR },
+		],
+		[t],
+	);
+
+	return (
+		<div className='space-y-2'>
+			<Label label={t('organisms.subscriptionForm.subscriptionCycle')} />
+			<div className='flex items-center space-x-2'>
+				{options.map((option, index) => (
+					<div
+						key={index}
+						data-state={value === option.value ? 'active' : 'inactive'}
+						className={cn(
+							'text-[15px] font-normal text-content-muted px-3 py-1 rounded-[6px]',
+							'data-[state=active]:text-content data-[state=active]:bg-surface-shell',
+							'hover:text-content transition-colors',
+							'data-[state=inactive]:border data-[state=inactive]:border-border data-[state=active]:border-primary',
+							'bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0',
+							'cursor-pointer',
+						)}
+						onClick={() => !disabled && onChange(option.value)}>
+						{option.label}
+					</div>
+				))}
+			</div>
+		</div>
+	);
+};
+
+const SubscriptionForm = ({
+	state,
+	setState,
+	plans,
+	plansLoading,
+	plansError,
+	isLoadingPlanDetails,
+	isPlanDetailsError,
+	isDisabled,
+	phases = [],
+	onPhasesChange,
+	allCoupons = [],
+	subscriberCustomer,
+	customerPicker,
+}: {
+	state: SubscriptionFormState;
+	setState: React.Dispatch<React.SetStateAction<SubscriptionFormState>>;
+	plans: PlanResponse[] | undefined;
+	plansLoading: boolean;
+	plansError: boolean;
+	isLoadingPlanDetails?: boolean;
+	isPlanDetailsError?: boolean;
+	isDisabled: boolean;
+	phases?: SubscriptionPhaseCreateRequest[];
+	onPhasesChange?: (phases: SubscriptionPhaseCreateRequest[]) => void;
+	allCoupons?: Coupon[];
+	/** Subscription customer; used for invoicing "Self" option and labels */
+	subscriberCustomer?: Customer;
+	/** When set, renders a customer picker under Subscription Details and above Plan */
+	customerPicker?: {
+		value?: Customer;
+		onChange: (customer: Customer | undefined) => void;
+		hint?: string;
+	};
+	/** Inline subscription-create 400 for fx_rates, with the offending row indexes. */
+}) => {
+	const { t } = useTranslation(['customers', 'common']);
+	const isCustomerSelectionPending = !!customerPicker && !customerPicker.value;
+	// Fetch plan prices via shared hook (same cache key + canonical active filter as CreateCustomerSubscriptionPage)
+	const { data: selectedPlanPrices } = usePlanPrices(state.selectedPlan);
+	const billingCurrency = resolveBillingCurrency(state.currency, [state.invoicingCustomer, customerPicker?.value, subscriberCustomer]);
+	const fxRatesAllowed = canSetSubscriptionFxRates(state.currency, billingCurrency);
+	const showFxOverrides = fxRatesAllowed && (!isDisabled || state.fxRates.length > 0);
+	const { data: tenantFxRate } = useTenantFxRate(fxRatesAllowed && !isDisabled ? state.currency : undefined, billingCurrency);
+
+	// Rows are valid only for the charge → billing pair they were entered for.
+	const fxPair = fxRatesAllowed ? `${state.currency.toLowerCase()}->${billingCurrency}` : undefined;
+	const clearFxRates = useCallback(() => setState((prev) => ({ ...prev, fxRates: [] })), [setState]);
+	useClearOnFxPairChange(fxPair, !isDisabled, state.fxRates.length > 0, clearFxRates);
+
+	// Split plan prices into what attaches by default (exact cadence + ONETIME) vs. what
+	// the user can opt into via the "Also available on this plan" section (compatible but
+	// finer cadence). Backend attaches partition.primary by default; sending
+	// include_price_ids on submit enumerates the full selection (primary + opted-in).
+	const pricePartition = useMemo(
+		() =>
+			selectedPlanPrices?.items
+				? partitionPricesForSubscription(selectedPlanPrices.items, state.billingPeriod, 1, state.currency)
+				: { primary: [], additional: [] },
+		[selectedPlanPrices?.items, state.billingPeriod, state.currency],
+	);
+
+	// Additional prices are opted in per **cadence** (toggling Monthly pulls in every monthly
+	// price on the plan). Grouped for the "Also available on this plan" section.
+	const additionalCadenceGroups = useMemo(() => groupAdditionalPricesByCadence(pricePartition.additional), [pricePartition.additional]);
+
+	// Prices in the main "Charges" table = primary partition + every additional price whose
+	// cadence key was opted in. Merged rows go through the existing SubscriptionPriceTable
+	// override / commitment / coupon flows unchanged.
+	//
+	// In phase mode (phases.length > 0) opt-in cadences are ignored: the create payload's
+	// phases branch does not send include_price_ids, so any opted-in additional prices
+	// would silently drop at submit. Return only the primary partition so what the UI shows
+	// (in PhaseList and elsewhere) matches what actually gets sent.
+	const currentPrices = useMemo(() => {
+		if (phases.length > 0) return pricePartition.primary;
+		if (state.optedInAdditionalCadences.length === 0) return pricePartition.primary;
+		const optedSet = new Set(state.optedInAdditionalCadences);
+		const optedIn = pricePartition.additional.filter((p) => optedSet.has(cadenceKey(p.billing_period, p.billing_period_count)));
+		return [...pricePartition.primary, ...optedIn];
+	}, [pricePartition, state.optedInAdditionalCadences, phases.length]);
+
+	const hasFixedSubscriptionChargePrice = useMemo(() => {
+		if (!selectedPlanPrices?.items?.length) return false;
+		const filtered = filterPlanPricesForSubscriptionCharges(selectedPlanPrices.items, state.billingPeriod, state.currency);
+		return filtered.some((p) => p.type === PRICE_TYPE.FIXED);
+	}, [selectedPlanPrices?.items, state.billingPeriod, state.currency]);
+
+	useEffect(() => {
+		if (!hasFixedSubscriptionChargePrice) return;
+		setState((prev) => {
+			if (prev.autoInvoiceThreshold === '') return prev;
+			return { ...prev, autoInvoiceThreshold: '' };
+		});
+	}, [hasFixedSubscriptionChargePrice, setState]);
+
+	// Reconcile opted-in additional cadences when the available cadence set shifts (e.g. user
+	// changed billing_period / currency, or the plan swap changed prices). Keep keys still
+	// available; drop the rest. Do NOT silently re-add a cadence the user deselected earlier.
+	const additionalCadenceKeysStr = additionalCadenceGroups.map((g) => g.key).join('|');
+	useEffect(() => {
+		const availableKeys = new Set(additionalCadenceGroups.map((g) => g.key));
+		setState((prev) => {
+			const filtered = prev.optedInAdditionalCadences.filter((k) => availableKeys.has(k));
+			if (filtered.length === prev.optedInAdditionalCadences.length) return prev;
+			return { ...prev, optedInAdditionalCadences: filtered };
+		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [additionalCadenceKeysStr, setState]);
+
+	// Does anything the subscription attaches (primary + opted-in + inline extras) bill more
+	// often than the subscription itself? `line_item_grouping` is a no-op unless something
+	// splits, so the control only shows in single-phase mode when something does. (The phases
+	// branch of the create payload is not wired for it in this iteration.)
+	const hasSplittingCharge = useMemo(() => {
+		const addedPrices = (state.addedSubscriptionLineItems ?? [])
+			.map((item) => item.price)
+			.filter((price): price is NonNullable<typeof price> => !!price);
+		return subscriptionHasSplittingCharge(state.billingPeriod, 1, [...currentPrices, ...addedPrices]);
+	}, [currentPrices, state.addedSubscriptionLineItems, state.billingPeriod]);
+
+	const showLineItemGrouping = phases.length === 0 && hasSplittingCharge;
+
+	// Drop the opt-in when the control disappears (plan/cadence/opt-in change) so a hidden
+	// toggle can never leak `per_billing_period` into the payload.
+	useEffect(() => {
+		if (showLineItemGrouping) return;
+		setState((prev) => (prev.combineLineItemsPerBillingPeriod ? { ...prev, combineLineItemsPerBillingPeriod: false } : prev));
+	}, [showLineItemGrouping, setState]);
+
+	// Rendered as a footer inside the "Also available on this plan" border, since a charge can
+	// only bill more often than the subscription once a finer cadence is opted in there. The
+	// standalone form covers the one case that section can't host: an inline "Add charge" with
+	// a finer cadence when the plan itself has no additional cadences.
+	const lineItemGroupingProps = {
+		checked: state.combineLineItemsPerBillingPeriod,
+		onChange: (checked: boolean) => setState((prev) => ({ ...prev, combineLineItemsPerBillingPeriod: checked })),
+		showOverageNote: state.commitmentAmount.trim() !== '',
+		disabled: isDisabled,
+	};
+	const lineItemGroupingControl = <LineItemGroupingSection {...lineItemGroupingProps} />;
+	const lineItemGroupingControlStandalone = <LineItemGroupingSection {...lineItemGroupingProps} variant='section' />;
+
+	// Price overrides functionality for subscription-level
+	const { overriddenPrices, overridePrice, resetOverride } = usePriceOverrides(currentPrices);
+
+	// Initialize hook from state if editing existing subscription with overrides (only once on mount)
+	const hasInitializedRef = useRef(false);
+	useEffect(() => {
+		if (!hasInitializedRef.current && state.priceOverrides && Object.keys(state.priceOverrides).length > 0) {
+			Object.entries(state.priceOverrides).forEach(([priceId, override]) => {
+				overridePrice(priceId, override);
+			});
+			hasInitializedRef.current = true;
+		} else if (!hasInitializedRef.current) {
+			// Mark as initialized even if there are no overrides to avoid sync on mount
+			hasInitializedRef.current = true;
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []); // Only run once on mount
+
+	// Sync price overrides with state (hook -> state)
+	// Only sync after initialization to avoid overwriting state on mount
+	useEffect(() => {
+		if (hasInitializedRef.current) {
+			setState((prev) => ({
+				...prev,
+				priceOverrides: overriddenPrices,
+			}));
+		}
+	}, [overriddenPrices, setState]);
+
+	const planIds = useMemo(() => plans?.map((p) => p.id) ?? [], [plans]);
+
+	// Plans without any published charge cannot produce a valid subscription — look up which
+	// plans have prices so charge-less plans render grayed out and unselectable in the dropdown.
+	// Returns an array (not a Set) so the React Query cache stays serializable.
+	const { data: planIdsWithCharges } = useQuery({
+		queryKey: ['planIdsWithCharges', planIds],
+		queryFn: async () => {
+			const idsWithCharges = new Set<string>();
+			const PAGE_SIZE = 500;
+			// Hard cap on page requests so a misbehaving backend (full pages with an unreliable
+			// `total`) can't loop forever; return whatever IDs we've collected once reached.
+			const MAX_PAGES = 20;
+			let offset = 0;
+			for (let page = 0; page < MAX_PAGES; page++) {
+				const response = await PriceApi.searchPrices({
+					filters: [
+						{
+							field: 'entity_type',
+							operator: FilterOperator.EQUAL,
+							data_type: DataType.STRING,
+							value: { string: PRICE_ENTITY_TYPE.PLAN },
+						},
+						{
+							field: 'entity_id',
+							operator: FilterOperator.IN,
+							data_type: DataType.ARRAY,
+							value: { array: planIds },
+						},
+						{
+							field: 'status',
+							operator: FilterOperator.EQUAL,
+							data_type: DataType.STRING,
+							value: { string: ENTITY_STATUS.PUBLISHED },
+						},
+					],
+					limit: PAGE_SIZE,
+					offset,
+				});
+				response.items.forEach((price) => {
+					if (price.entity_id) idsWithCharges.add(price.entity_id);
+				});
+				if (response.items.length < PAGE_SIZE) break;
+				const total = response.pagination?.total;
+				if (total != null && offset + response.items.length >= total) break;
+				offset += PAGE_SIZE;
+			}
+			return [...idsWithCharges];
+		},
+		enabled: planIds.length > 0,
+	});
+
+	// Derived Set preserves O(1) lookups; undefined while the lookup is in flight.
+	const planIdsWithChargesSet = useMemo(() => (planIdsWithCharges ? new Set(planIdsWithCharges) : undefined), [planIdsWithCharges]);
+
+	const plansWithCharges = useMemo(() => {
+		return (
+			plans?.map((plan) => {
+				// While the price lookup is in flight, leave plans selectable to avoid a flicker lockout.
+				const hasCharges = !planIdsWithChargesSet || planIdsWithChargesSet.has(plan.id);
+				return {
+					label: plan.name,
+					value: plan.id,
+					disabled: !hasCharges,
+					...(!hasCharges ? { description: t('organisms.subscriptionForm.planNoCharges') } : {}),
+				};
+			}) ?? []
+		);
+	}, [plans, planIdsWithChargesSet, t]);
+
+	// Get available billing periods and currencies from selectedPlanPrices
+	const availableBillingPeriods = useMemo(() => {
+		if (!selectedPlanPrices?.items) return [];
+		const periods = uniqueRecurringBillingPeriodsFromPrices(selectedPlanPrices.items);
+		return periods.map((period) => ({
+			label: toSentenceCase(period.replace('_', ' ')),
+			value: period,
+		}));
+	}, [selectedPlanPrices]);
+
+	const availableCurrencies = useMemo(() => {
+		const items = selectedPlanPrices?.items;
+		if (!items?.length || !state.billingPeriod) return [];
+		const recurringForPeriod = items.filter(
+			(price) => !isOneTimePlanPrice(price) && price.billing_period.toLowerCase() === state.billingPeriod.toLowerCase(),
+		);
+		const source = recurringForPeriod.length > 0 ? recurringForPeriod : items.filter(isOneTimePlanPrice);
+		const currencies = [...new Set(source.map((price) => price.currency))];
+		return currencies.map((currency) => ({
+			label: currency.toUpperCase(),
+			value: currency,
+		}));
+	}, [selectedPlanPrices, state.billingPeriod]);
+
+	const handlePlanChange = (value: string) => {
+		// Just set the plan ID - prices will be fetched via useQuery automatically
+		setState((prev) => ({
+			...prev,
+			selectedPlan: value,
+			// Clear price overrides and coupons when changing plans
+			priceOverrides: {},
+			linkedCoupon: null,
+			lineItemCoupons: {},
+			inheritanceCustomers: [],
+			// Reset cadence opt-ins so the new plan's additional prices require fresh consent
+			// rather than silently attaching just because the cadence key happens to match.
+			optedInAdditionalCadences: [],
+			combineLineItemsPerBillingPeriod: false,
+		}));
+	};
+
+	const handleBillingPeriodChange = (value: string) => {
+		if (!selectedPlanPrices?.items) {
+			toast.error('Invalid billing period.');
+			return;
+		}
+
+		// Get available currencies for the new billing period (recurring only; fallback to one-time if plan has no recurring for that period)
+		const recurringForPeriod = selectedPlanPrices.items.filter(
+			(price) => !isOneTimePlanPrice(price) && price.billing_period.toLowerCase() === value.toLowerCase(),
+		);
+		const source = recurringForPeriod.length > 0 ? recurringForPeriod : selectedPlanPrices.items.filter(isOneTimePlanPrice);
+		const currencies = [...new Set(source.map((price) => price.currency))];
+		const defaultCurrency = currencies.includes(state.currency) ? state.currency : currencies[0];
+
+		setState({
+			...state,
+			billingPeriod: value as BILLING_PERIOD,
+			currency: defaultCurrency,
+			commitmentDuration: value.toUpperCase(),
+		});
+	};
+
+	const getEmptyCreditGrant = (): InternalCreditGrantRequest => {
+		return {
+			id: uniqueId('credit-grant-'),
+			name: 'Free Credits',
+			scope: CREDIT_GRANT_SCOPE.SUBSCRIPTION,
+			credits: 0,
+			cadence: CREDIT_GRANT_CADENCE.ONETIME,
+			period: CREDIT_GRANT_PERIOD.MONTHLY,
+			period_count: 1,
+			expiration_type: CREDIT_GRANT_EXPIRATION_TYPE.NEVER,
+			expiration_duration: 0,
+			expiration_duration_unit: CREDIT_GRANT_PERIOD_UNIT.DAYS,
+			priority: 0,
+			metadata: {},
+			subscription_id: uniqueId('sub_'),
+		};
+	};
+
+	// Fetch plan-level credit grants to display them alongside subscription-level grants
+	const { data: selectedPlanCreditGrants } = useQuery({
+		queryKey: ['creditGrants', state.selectedPlan],
+		queryFn: async () => {
+			if (!state.selectedPlan) return null;
+			const response = await CreditGrantApi.list({
+				plan_ids: [state.selectedPlan],
+				scope: CREDIT_GRANT_SCOPE.PLAN,
+			});
+			return response;
+		},
+		enabled: !!state.selectedPlan,
+	});
+
+	// Track which credit grants were originally from plan level
+	const planLevelCreditGrantIds = useMemo(() => {
+		const ids = new Set<string>();
+		if (selectedPlanCreditGrants?.items) {
+			selectedPlanCreditGrants.items.forEach((grant) => ids.add(grant.id));
+		}
+		return ids;
+	}, [selectedPlanCreditGrants]);
+
+	// Track edited plan-level grant IDs (these will be converted to subscription scope)
+	const [editedPlanGrantIds, setEditedPlanGrantIds] = useState<Set<string>>(new Set());
+	// Add subscription charge dialog open state (single-phase only)
+	const [isAddChargeDialogOpen, setAddChargeDialogOpen] = useState(false);
+	// When set, dialog is in edit mode for this added line item (tempId)
+	const [editingAddedChargeTempId, setEditingAddedChargeTempId] = useState<string | null>(null);
+
+	// Stable identities so SubscriptionPriceTable's row memoization isn't invalidated by every
+	// unrelated SubscriptionForm re-render (was rebuilding every price row on any state change,
+	// e.g. applying a discount to a single line item re-rendered the whole table).
+	const handleLineItemCouponsChange = useCallback(
+		(priceId: string, coupon: Coupon | null) => {
+			setState((prev) => {
+				const newLineItemCoupons = { ...prev.lineItemCoupons };
+				if (coupon) {
+					newLineItemCoupons[priceId] = coupon;
+				} else {
+					delete newLineItemCoupons[priceId];
+				}
+				return {
+					...prev,
+					lineItemCoupons: newLineItemCoupons,
+				};
+			});
+		},
+		[setState],
+	);
+
+	const handleCommitmentChange = useCallback(
+		(priceId: string, config: LineItemCommitmentConfig | null, timeBuckets?: CommitmentTimeBucket[]) => {
+			if (config) {
+				overridePrice(priceId, {
+					commitment: config,
+					commitment_time_buckets: timeBuckets === undefined ? undefined : timeBuckets.length > 0 ? timeBuckets : undefined,
+				});
+			} else {
+				const currentOverride = overriddenPrices[priceId];
+				if (currentOverride) {
+					const restOverride = { ...currentOverride };
+					delete restOverride.commitment;
+					delete restOverride.commitment_time_buckets;
+					if (Object.keys(restOverride).length > 1) {
+						overridePrice(priceId, restOverride);
+					} else {
+						resetOverride(priceId);
+					}
+				}
+			}
+		},
+		[overridePrice, overriddenPrices, resetOverride],
+	);
+
+	const handleAddCharge = useCallback(() => {
+		setEditingAddedChargeTempId(null);
+		setAddChargeDialogOpen(true);
+	}, []);
+
+	const handleRemoveAddedCharge = useCallback(
+		(tempId: string) => {
+			setState((prev) => ({
+				...prev,
+				addedSubscriptionLineItems: (prev.addedSubscriptionLineItems ?? []).filter((i) => i.tempId !== tempId),
+			}));
+		},
+		[setState],
+	);
+
+	const handleEditAddedCharge = useCallback((item: AddedSubscriptionLineItem) => {
+		setEditingAddedChargeTempId(item.tempId);
+		setAddChargeDialogOpen(true);
+	}, []);
+
+	// Combine plan credit grants with user-added credit grants (all editable now)
+	const relevantCreditGrants = useMemo(() => {
+		const planGrants: InternalCreditGrantRequest[] =
+			state.selectedPlan && selectedPlanCreditGrants && (selectedPlanCreditGrants.items.length ?? 0) > 0
+				? selectedPlanCreditGrants.items.map(creditGrantToInternal)
+				: [];
+
+		// User-added credit grants from state (subscription-level)
+		const userGrants: InternalCreditGrantRequest[] = (state.creditGrants || []) as InternalCreditGrantRequest[];
+
+		// If there are edited/deleted plan grants, all grants are in state.creditGrants
+		// So we should only show those grants, not the original plan grants
+		const hasEditedOrDeletedPlanGrants = Array.from(planLevelCreditGrantIds).some((planGrantId) => {
+			// Check if this plan grant was deleted or is now in state.creditGrants (edited)
+			const isDeleted = !userGrants.find((g) => g.id === planGrantId) && editedPlanGrantIds.has(planGrantId);
+			const isInUserGrants = userGrants.find((g) => g.id === planGrantId);
+			return isDeleted || isInUserGrants;
+		});
+
+		if (hasEditedOrDeletedPlanGrants) {
+			// All grants are managed in state.creditGrants, don't show original plan grants
+			return userGrants;
+		}
+
+		// No edits/deletes: show original plan grants + subscription-level user grants
+		return [...planGrants, ...userGrants];
+	}, [selectedPlanCreditGrants, state.selectedPlan, state.creditGrants, planLevelCreditGrantIds, editedPlanGrantIds]);
+
+	const handleMarkGrantAsEdited = (grantId: string) => {
+		setEditedPlanGrantIds((prev) => new Set(prev).add(grantId));
+	};
+
+	// Fetch plan entitlements
+	const { data: planEntitlements } = useQuery({
+		queryKey: ['planEntitlements', state.selectedPlan],
+		queryFn: async () => {
+			if (!state.selectedPlan) return null;
+			try {
+				return await EntitlementApi.search({
+					filters: [
+						{
+							field: 'entity_type',
+							operator: FilterOperator.EQUAL,
+							data_type: DataType.STRING,
+							value: { string: ENTITLEMENT_ENTITY_TYPE.PLAN },
+						},
+						{
+							field: 'entity_id',
+							operator: FilterOperator.EQUAL,
+							data_type: DataType.STRING,
+							value: { string: state.selectedPlan },
+						},
+						{
+							field: 'status',
+							operator: FilterOperator.EQUAL,
+							data_type: DataType.STRING,
+							value: { string: ENTITY_STATUS.PUBLISHED },
+						},
+					],
+					expand: generateExpandQueryParams([EXPAND.FEATURES]),
+					limit: 10000,
+					offset: 0,
+				});
+			} catch (error) {
+				console.warn('Failed to fetch plan entitlements:', error);
+				return null;
+			}
+		},
+		enabled: !!state.selectedPlan,
+		retry: false,
+		refetchOnWindowFocus: false,
+	});
+
+	// Fetch addon entitlements
+	const addonIds = useMemo(() => state.addons?.map((addon) => addon.addon_id) || [], [state.addons]);
+	const { data: addonEntitlementsData } = useQuery({
+		queryKey: ['addonEntitlements', addonIds],
+		queryFn: async () => {
+			if (addonIds.length === 0) return [];
+			try {
+				const promises = addonIds.map((addonId) => AddonApi.GetEntitlements(addonId));
+				const results = await Promise.all(promises);
+				return results;
+			} catch (error) {
+				console.warn('Failed to fetch addon entitlements:', error);
+				return [];
+			}
+		},
+		enabled: addonIds.length > 0,
+		retry: false,
+		refetchOnWindowFocus: false,
+	});
+
+	// Combine all entitlements
+	const allEntitlements = useMemo(() => {
+		const planEnts = planEntitlements?.items || [];
+		const addonEnts = addonEntitlementsData?.flatMap((result) => result?.items || []) || [];
+		return [...planEnts, ...addonEnts];
+	}, [planEntitlements, addonEntitlementsData]);
+
+	// Clean up entitlement overrides when addons change
+	useEffect(() => {
+		const currentEntitlementIds = new Set(allEntitlements.map((ent) => ent.id));
+
+		setState((prev) => {
+			const cleanedOverrides: Record<string, EntitlementOverrideRequest> = {};
+
+			// Only keep overrides for entitlements that still exist
+			Object.entries(prev.entitlementOverrides).forEach(([entitlementId, override]) => {
+				if (currentEntitlementIds.has(entitlementId)) {
+					cleanedOverrides[entitlementId] = override;
+				}
+			});
+
+			// Only update if something changed
+			if (Object.keys(cleanedOverrides).length !== Object.keys(prev.entitlementOverrides).length) {
+				return {
+					...prev,
+					entitlementOverrides: cleanedOverrides,
+				};
+			}
+
+			return prev;
+		});
+	}, [allEntitlements]);
+
+	const handleEntitlementOverride = (entitlementId: string, override: EntitlementOverrideRequest) => {
+		setState((prev) => ({
+			...prev,
+			entitlementOverrides: {
+				...prev.entitlementOverrides,
+				[entitlementId]: override,
+			},
+		}));
+	};
+
+	const handleEntitlementOverrideReset = (entitlementId: string) => {
+		setState((prev) => {
+			const newOverrides = { ...prev.entitlementOverrides };
+			delete newOverrides[entitlementId];
+			return {
+				...prev,
+				entitlementOverrides: newOverrides,
+			};
+		});
+	};
+
+	return (
+		<div className='p-6 rounded-[6px] border border-line-strong space-y-6 bg-surface'>
+			<FormHeader title={t('organisms.subscriptionForm.subscriptionDetails')} variant='sub-header' />
+
+			{customerPicker && (
+				<div className='space-y-2'>
+					<CustomerSearchSelect
+						value={customerPicker.value}
+						onChange={customerPicker.onChange}
+						includeNoneOption={false}
+						display={{
+							label: t('subscriptionCreate.selectCustomerLabel'),
+							placeholder: t('subscriptionCreate.selectCustomerPlaceholder'),
+						}}
+					/>
+					{isCustomerSelectionPending && customerPicker.hint && <p className='text-sm text-muted-foreground'>{customerPicker.hint}</p>}
+				</div>
+			)}
+
+			{/* Plan Selection */}
+			{!plansLoading && (
+				<div className='space-y-2'>
+					<Select
+						value={state.selectedPlan}
+						options={plansWithCharges}
+						onChange={handlePlanChange}
+						label={t('organisms.subscriptionForm.planRequired')}
+						disabled={isDisabled || isLoadingPlanDetails || isCustomerSelectionPending}
+						placeholder={t('organisms.subscriptionForm.selectPlan')}
+						error={
+							plansError
+								? t('organisms.subscriptionForm.loadPlansError')
+								: isPlanDetailsError
+									? t('organisms.subscriptionForm.loadPlanDetailsError')
+									: undefined
+						}
+					/>
+					{isLoadingPlanDetails && state.selectedPlan && (
+						<p className='text-sm text-content-muted'>{t('organisms.subscriptionForm.loadingPlanDetails')}</p>
+					)}
+				</div>
+			)}
+
+			{/* Billing Period Selection */}
+			{state.selectedPlan && !isLoadingPlanDetails && availableBillingPeriods.length > 0 && (
+				<Select
+					key={availableBillingPeriods.map((opt) => opt.value).join(',')}
+					value={state.billingPeriod}
+					options={availableBillingPeriods}
+					onChange={handleBillingPeriodChange}
+					label={t('organisms.subscriptionForm.billingPeriodRequired')}
+					disabled={isDisabled || isLoadingPlanDetails}
+					placeholder={t('organisms.subscriptionForm.selectBillingPeriod')}
+				/>
+			)}
+
+			{/* Currency Selection */}
+			{state.selectedPlan && !isLoadingPlanDetails && availableCurrencies.length > 0 && (
+				<Select
+					key={availableCurrencies.map((opt) => opt.value).join(',')}
+					value={state.currency}
+					options={availableCurrencies}
+					onChange={(value) => setState((prev) => ({ ...prev, currency: value }))}
+					label={t('organisms.subscriptionForm.currencyRequired')}
+					disabled={isDisabled || isLoadingPlanDetails}
+					placeholder={t('organisms.subscriptionForm.selectCurrency')}
+				/>
+			)}
+
+			{/* Billing Currency (read-only) and subscription FX overrides */}
+			{state.selectedPlan && !isLoadingPlanDetails && billingCurrency && (
+				<Input
+					label={t('organisms.subscriptionForm.billingCurrency')}
+					value={billingCurrency.toUpperCase()}
+					disabled
+					description={t('organisms.subscriptionForm.billingCurrencyHint', {
+						billing: billingCurrency.toUpperCase(),
+						charge: state.currency.toUpperCase(),
+					})}
+				/>
+			)}
+			{state.selectedPlan && !isLoadingPlanDetails && billingCurrency && showFxOverrides && (
+				<SubscriptionFxRateTable
+					data={state.fxRates}
+					onChange={(rows) => setState((prev) => ({ ...prev, fxRates: rows }))}
+					disabled={isDisabled}
+					chargeCurrency={state.currency}
+					billingCurrency={billingCurrency}
+					tenantRate={tenantFxRate}
+				/>
+			)}
+
+			{/* Subscription Cycle */}
+			{state.selectedPlan && !isLoadingPlanDetails && (
+				<BillingCycleSelector
+					value={state.billingCycle}
+					onChange={(value) =>
+						setState((prev) => ({
+							...prev,
+							billingCycle: value,
+							billingAnchor: value === BILLING_CYCLE.CALENDAR ? undefined : prev.billingAnchor,
+						}))
+					}
+					disabled={isDisabled || isLoadingPlanDetails}
+				/>
+			)}
+
+			{/* Add subscription charge dialog (single-phase only) */}
+			{state.selectedPlan && !isLoadingPlanDetails && phases.length === 0 && (
+				<AddSubscriptionChargeDialog
+					isOpen={isAddChargeDialogOpen}
+					onOpenChange={(open) => {
+						setAddChargeDialogOpen(open);
+						if (!open) setEditingAddedChargeTempId(null);
+					}}
+					onSave={(item) => {
+						if (editingAddedChargeTempId) {
+							setState((prev) => ({
+								...prev,
+								addedSubscriptionLineItems: (prev.addedSubscriptionLineItems ?? []).map((i) => (i.tempId === item.tempId ? item : i)),
+							}));
+						} else {
+							setState((prev) => ({
+								...prev,
+								addedSubscriptionLineItems: [...(prev.addedSubscriptionLineItems ?? []), item],
+							}));
+						}
+						setEditingAddedChargeTempId(null);
+						setAddChargeDialogOpen(false);
+					}}
+					defaultCurrency={state.currency}
+					defaultBillingPeriod={state.billingPeriod}
+					initialItem={
+						editingAddedChargeTempId != null
+							? (state.addedSubscriptionLineItems?.find((i) => i.tempId === editingAddedChargeTempId) ?? null)
+							: null
+					}
+				/>
+			)}
+
+			{/* Conditional: Show Subscription Fields OR Phases */}
+			{state.selectedPlan && !isLoadingPlanDetails && phases.length === 0 && (
+				<>
+					{/* Subscription Dates */}
+					<div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6'>
+						<div>
+							<Label label={t('organisms.subscriptionForm.subscriptionStartRequired')} />
+							<DatePicker
+								date={new Date(state.startDate)}
+								setDate={(date) => {
+									if (date) {
+										setState((prev) => ({ ...prev, startDate: date.toISOString() }));
+									}
+								}}
+								disabled={isDisabled}
+							/>
+						</div>
+						<div>
+							<Label label={t('organisms.subscriptionForm.subscriptionEnd')} />
+							<DatePicker
+								date={state.endDate ? new Date(state.endDate) : undefined}
+								setDate={(date) => {
+									setState((prev) => ({ ...prev, endDate: date ? date.toISOString() : undefined }));
+								}}
+								placeholder={t('organisms.subscriptionForm.foreverPlaceholder')}
+								disabled={isDisabled}
+								minDate={new Date(state.startDate)}
+							/>
+						</div>
+					</div>
+
+					{state.selectedPlan && !isLoadingPlanDetails && phases.length === 0 && state.billingCycle === BILLING_CYCLE.ANNIVERSARY && (
+						<div className=''>
+							<DatePicker
+								label={t('organisms.subscriptionForm.billingDate')}
+								date={state.billingAnchor ? new Date(state.billingAnchor) : undefined}
+								setDate={(date) => setState((prev) => ({ ...prev, billingAnchor: date ? date.toISOString() : undefined }))}
+								disabled={isDisabled}
+								placeholder={t('organisms.subscriptionForm.selectBillingDate')}
+							/>
+						</div>
+					)}
+
+					{/* Subscription Level Price Table (always show in single-phase so Add charge is available) */}
+					<div className='mt-6 pt-6 border-t border-line'>
+						<SubscriptionPriceTable
+							data={currentPrices}
+							billingPeriod={state.billingPeriod}
+							billingPeriodCount={1}
+							currency={state.currency}
+							onPriceOverride={overridePrice}
+							onResetOverride={resetOverride}
+							overriddenPrices={overriddenPrices}
+							lineItemCoupons={state.lineItemCoupons}
+							onLineItemCouponsChange={handleLineItemCouponsChange}
+							onCommitmentChange={handleCommitmentChange}
+							disabled={isDisabled}
+							subscriptionLevelCoupon={state.linkedCoupon}
+							addedLineItems={state.addedSubscriptionLineItems}
+							onAddCharge={handleAddCharge}
+							onRemoveAddedCharge={handleRemoveAddedCharge}
+							onEditAddedCharge={handleEditAddedCharge}
+						/>
+					</div>
+
+					{/* Hidden in phase mode — the phases branch of the create payload does not
+					    send include_price_ids, so any opt-in here would silently drop at submit. */}
+					{phases.length === 0 && additionalCadenceGroups.length > 0 && (
+						<div className='mt-6'>
+							<AdditionalPlanPricesSection
+								groups={additionalCadenceGroups}
+								optedInKeys={state.optedInAdditionalCadences}
+								onToggle={(key, included) => {
+									setState((prev) => {
+										const next = new Set(prev.optedInAdditionalCadences);
+										if (included) next.add(key);
+										else next.delete(key);
+										return { ...prev, optedInAdditionalCadences: [...next] };
+									});
+								}}
+								subPeriod={state.billingPeriod}
+								subCount={1}
+								disabled={isDisabled}
+								footer={showLineItemGrouping ? lineItemGroupingControl : undefined}
+							/>
+						</div>
+					)}
+
+					{/* Fallback placement: the splitting charge came from an inline "Add charge",
+					    so the cadence table isn't on screen to trail. Carries its own heading. */}
+					{showLineItemGrouping && additionalCadenceGroups.length === 0 && <div className='mt-6'>{lineItemGroupingControlStandalone}</div>}
+
+					{/* Subscription Level Discounts — divider above so it reads as a peer section
+					    to Charges (and separates from the Also-available sub-section under Charges). */}
+					<div className='mt-6 pt-6 border-t border-line'>
+						<SubscriptionDiscountTable
+							coupon={state.linkedCoupon}
+							onChange={(coupon) => setState((prev) => ({ ...prev, linkedCoupon: coupon }))}
+							disabled={isDisabled}
+							currency={state.currency}
+							allLineItemCoupons={state.lineItemCoupons}
+						/>
+					</div>
+				</>
+			)}
+
+			{/* Subscription Phases Section - Show when phases exist OR as add phase button */}
+			{state.selectedPlan && !isLoadingPlanDetails && phases !== undefined && onPhasesChange && (
+				<div className='mt-6 pt-6 border-t border-line'>
+					<PhaseList
+						phases={phases}
+						onChange={onPhasesChange}
+						prices={currentPrices}
+						billingPeriod={state.billingPeriod}
+						currency={state.currency}
+						disabled={isDisabled}
+						subscriptionStartDate={new Date(state.startDate)}
+						subscriptionEndDate={state.endDate ? new Date(state.endDate) : undefined}
+						allCoupons={allCoupons}
+						subscriptionData={{
+							startDate: state.startDate,
+							endDate: state.endDate,
+							linkedCoupon: state.linkedCoupon,
+							lineItemCoupons: state.lineItemCoupons,
+							priceOverrides: state.priceOverrides,
+						}}
+						onConvertToPhases={() => {
+							// Clear subscription-level data after conversion
+							// IMPORTANT: Clear endDate to avoid deadlock when adding more phases
+							// Phases have no equivalent of subscription-level "added charges" (AddSubscriptionChargeDialog
+							// is hidden once phases.length > 0, and the create payload's line_items is always omitted
+							// when phases are present - see CreateCustomerSubscriptionPage). Warn and clear them here
+							// instead of letting them silently vanish from the payload at submit time.
+							if ((state.addedSubscriptionLineItems?.length ?? 0) > 0) {
+								toast.error(t('organisms.subscriptionForm.addedChargesLostOnPhaseConversion'));
+							}
+							setState((prev) => ({
+								...prev,
+								endDate: undefined,
+								linkedCoupon: null,
+								lineItemCoupons: {},
+								priceOverrides: {},
+								addedSubscriptionLineItems: [],
+							}));
+						}}
+						onConvertBackToSubscription={(subscriptionData) => {
+							// Restore subscription-level data when converting back from phases
+							setState((prev) => ({
+								...prev,
+								startDate: subscriptionData.startDate,
+								endDate: subscriptionData.endDate,
+								linkedCoupon: subscriptionData.linkedCoupon,
+								lineItemCoupons: subscriptionData.lineItemCoupons,
+								priceOverrides: subscriptionData.priceOverrides,
+							}));
+
+							// Re-initialize price overrides hook with restored data
+							Object.entries(subscriptionData.priceOverrides).forEach(([priceId, override]) => {
+								overridePrice(priceId, override);
+							});
+						}}
+					/>
+				</div>
+			)}
+
+			{/* Commitment and Overage - Always visible */}
+			{state.selectedPlan && !isLoadingPlanDetails && (
+				<>
+					<div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-line'>
+						<DecimalUsageInput
+							label={t('organisms.subscriptionForm.commitmentAmount')}
+							value={state.commitmentAmount}
+							onChange={(value) => setState((prev) => ({ ...prev, commitmentAmount: value }))}
+							placeholder={t('organisms.subscriptionForm.commitmentAmountPlaceholder')}
+							disabled={isDisabled}
+							precision={2}
+							min={0}
+						/>
+						<Select
+							label={t('organisms.subscriptionForm.commitmentPeriod')}
+							value={state.commitmentDuration}
+							options={[
+								{ label: t('organisms.subscriptionForm.commitmentDaily'), value: 'DAILY' },
+								{ label: t('organisms.subscriptionForm.commitmentMonthly'), value: 'MONTHLY' },
+								{ label: t('organisms.subscriptionForm.commitmentQuarterly'), value: 'QUARTERLY' },
+								{ label: t('organisms.subscriptionForm.commitmentHalfYearly'), value: 'HALF_YEARLY' },
+								{ label: t('organisms.subscriptionForm.commitmentAnnual'), value: 'ANNUAL' },
+							]}
+							onChange={(value) => setState((prev) => ({ ...prev, commitmentDuration: value }))}
+							placeholder={t('organisms.subscriptionForm.sameAsBillingPlaceholder')}
+							disabled={isDisabled}
+						/>
+					</div>
+					{/* Overage Factor + Enable True Up */}
+					<div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
+						<DecimalUsageInput
+							label={t('organisms.subscriptionForm.overageFactor')}
+							value={state.overageFactor}
+							onChange={(value) => setState((prev) => ({ ...prev, overageFactor: value }))}
+							placeholder={t('organisms.subscriptionForm.overageFactorPlaceholder')}
+							disabled={isDisabled}
+							precision={2}
+							min={0}
+						/>
+						<div className='flex flex-col space-y-2'>
+							<Label label={t('organisms.subscriptionForm.enableTrueUp')} />
+							<Switch
+								checked={state.enable_true_up}
+								onCheckedChange={(checked) => setState((prev) => ({ ...prev, enable_true_up: checked }))}
+								disabled={isDisabled}
+							/>
+						</div>
+					</div>
+				</>
+			)}
+
+			{/* Credit Grants (Subscription Level) */}
+			{state.selectedPlan && !isLoadingPlanDetails && (
+				<div className='mt-6 pt-6 border-t border-line'>
+					<SubscriptionCreditGrantTable
+						getEmptyCreditGrant={() => getEmptyCreditGrant()}
+						data={relevantCreditGrants}
+						onChange={(data: InternalCreditGrantRequest[]) => {
+							// Check if any plan-level grants were edited or deleted by inspecting the data
+							const hasEditedOrDeletedPlanGrants = Array.from(planLevelCreditGrantIds).some((planGrantId) => {
+								const grantInData = data.find((g) => g.id === planGrantId);
+								// Deleted: not in data anymore
+								if (!grantInData) return true;
+								// Edited: scope changed from PLAN to SUBSCRIPTION
+								if (grantInData.scope === CREDIT_GRANT_SCOPE.SUBSCRIPTION) return true;
+								return false;
+							});
+
+							// Check if there are any new subscription-level grants (not from plan)
+							const hasNewSubscriptionGrants = data.some(
+								(grant) => !planLevelCreditGrantIds.has(grant.id) && grant.scope === CREDIT_GRANT_SCOPE.SUBSCRIPTION,
+							);
+
+							// If plan grants were modified OR new subscription grants were added, convert all to subscription level
+							const shouldConvertAll = hasEditedOrDeletedPlanGrants || (hasNewSubscriptionGrants && planLevelCreditGrantIds.size > 0);
+
+							if (shouldConvertAll) {
+								// If any plan-level grant was edited/deleted OR new subscription grant added,
+								// convert ALL remaining plan grants to subscription scope
+								const convertedGrants = data.map((grant) => {
+									// If it's an unedited plan-level grant (still has PLAN scope), convert it now
+									if (planLevelCreditGrantIds.has(grant.id) && grant.scope !== CREDIT_GRANT_SCOPE.SUBSCRIPTION) {
+										return {
+											...grant,
+											scope: CREDIT_GRANT_SCOPE.SUBSCRIPTION,
+											subscription_id: uniqueId('sub_'),
+											plan_id: undefined,
+										};
+									}
+									// Already converted or subscription-level grant, keep as is
+									return grant;
+								});
+
+								// Store all grants (all are now subscription-level) and mark as modified
+								setState((prev) => ({
+									...prev,
+									creditGrants: convertedGrants,
+									hasModifiedPlanCreditGrants: true,
+								}));
+							} else {
+								// No plan grants edited/deleted and no new subscription grants: only store subscription-level grants
+								// Plan-level grants will be sent automatically by the backend
+								const userGrants = data.filter((grant) => !planLevelCreditGrantIds.has(grant.id));
+								setState((prev) => ({
+									...prev,
+									creditGrants: userGrants,
+									hasModifiedPlanCreditGrants: false,
+								}));
+							}
+						}}
+						disabled={isDisabled}
+						planLevelCreditGrantIds={planLevelCreditGrantIds}
+						onMarkAsEdited={handleMarkGrantAsEdited}
+						subscriptionId={uniqueId('sub_')}
+					/>
+				</div>
+			)}
+
+			{/* Subscription entitlements: dollar allowances shared by every usage line */}
+			{state.selectedPlan && !isLoadingPlanDetails && (
+				<div className='mt-6 pt-6 border-t border-line'>
+					<SubscriptionEntitlementGrantDraftTable
+						data={state.subscriptionEntitlementGrants}
+						onChange={(data) => setState((prev) => ({ ...prev, subscriptionEntitlementGrants: data }))}
+						currency={state.currency}
+						disabled={isDisabled}
+					/>
+				</div>
+			)}
+
+			{/* Tax Rate Overrides */}
+			{state.selectedPlan && !isLoadingPlanDetails && (
+				<div className='mt-6 pt-6 border-t border-line'>
+					<SubscriptionTaxAssociationTable
+						data={state.tax_rate_overrides || []}
+						onChange={(data) => setState((prev) => ({ ...prev, tax_rate_overrides: data }))}
+						disabled={isDisabled}
+					/>
+				</div>
+			)}
+
+			{/* Addons Section */}
+			{state.selectedPlan && !isLoadingPlanDetails && (
+				<div className='mt-6 pt-6 border-t border-line'>
+					<SubscriptionAddonTable
+						data={state.addons || []}
+						onChange={(data) => {
+							setState((prev) => ({ ...prev, addons: data }));
+						}}
+						disabled={isDisabled}
+						billingPeriod={state.billingPeriod}
+						billingPeriodCount={1}
+						currency={state.currency}
+					/>
+				</div>
+			)}
+
+			{/* Entitlements Section */}
+			{state.selectedPlan && !isLoadingPlanDetails && allEntitlements.length > 0 && (
+				<div className='mt-6 pt-6 border-t border-line'>
+					<div className='space-y-4'>
+						<FormHeader className='mb-0' title={t('organisms.subscriptionForm.entitlements')} variant='sub-header' />
+						<EntitlementOverridesTable
+							entitlements={allEntitlements}
+							overrides={state.entitlementOverrides}
+							onOverrideChange={handleEntitlementOverride}
+							onOverrideReset={handleEntitlementOverrideReset}
+						/>
+					</div>
+				</div>
+			)}
+
+			{/* Advanced Configuration */}
+			{state.selectedPlan && !isLoadingPlanDetails && (
+				<div className='mt-6 pt-6 border-t border-line space-y-6'>
+					<FormHeader title={t('organisms.subscriptionForm.billingConfiguration')} variant='sub-header' />
+					<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+						<Select
+							value={state.paymentTerms ?? PAYMENT_TERMS_NONE}
+							options={paymentTermsOptions}
+							onChange={(value) => setState((prev) => ({ ...prev, paymentTerms: value === PAYMENT_TERMS_NONE ? undefined : value }))}
+							label={t('organisms.subscriptionForm.paymentTerms')}
+							disabled={isDisabled || isLoadingPlanDetails}
+							placeholder={t('organisms.subscriptionForm.selectPaymentTerms')}
+						/>
+						<CustomerSearchSelect
+							selfCustomer={subscriberCustomer}
+							value={state.invoicingCustomer}
+							excludeId={state.customerId}
+							onChange={(customer) => {
+								setState((prev) => ({
+									...prev,
+									invoicingCustomer: customer?.id && customer.id !== prev.customerId ? customer : undefined,
+								}));
+							}}
+							display={{
+								label: t('organisms.subscriptionForm.billingCustomerLabel'),
+								placeholder: t('organisms.subscriptionForm.billingCustomerPlaceholder'),
+							}}
+							searchPlaceholder={t('organisms.subscriptionForm.searchBillingCustomer')}
+							disabled={isDisabled}
+						/>
+					</div>
+
+					<div className='space-y-3 md:col-span-2'>
+						<InheritedCustomersTable
+							data={state.inheritanceCustomers}
+							onChange={(customers) => setState((prev) => ({ ...prev, inheritanceCustomers: customers }))}
+							disabled={isDisabled}
+							subscriberCustomerId={state.customerId}
+						/>
+					</div>
+
+					<Accordion
+						type='multiple'
+						className='overflow-hidden rounded-lg border border-line-zinc bg-surface shadow-[0_1px_3px_rgba(15,23,42,0.06)]'>
+						<AccordionItem value='trial'>
+							<AccordionTrigger className='px-5 py-4'>
+								<span className='flex min-w-0 flex-1 items-center'>
+									<span className='min-w-0 flex-1 truncate'>{t('organisms.subscriptionForm.freeTrial')}</span>
+									<span className='ms-auto flex shrink-0 items-center ps-2'>
+										<BillingAccordionInfoTooltip
+											ariaLabel={t('organisms.subscriptionForm.aboutFreeTrialAria')}
+											description={t('organisms.subscriptionForm.freeTrialHelp')}
+										/>
+									</span>
+								</span>
+							</AccordionTrigger>
+							<AccordionContent className='border-t border-line-zinc-subtle bg-surface px-5 pb-5 pt-4'>
+								<div className='max-w-xs'>
+									<Input
+										id='subscription-billing-trial-days'
+										aria-label={t('organisms.subscriptionForm.trialDaysAria')}
+										variant='number'
+										value={state.subscriptionTrialPeriodDays}
+										onChange={(value) => setState((prev) => ({ ...prev, subscriptionTrialPeriodDays: value }))}
+										suffix='days'
+										placeholder={t('organisms.subscriptionForm.trialDaysPlaceholder')}
+										disabled={isDisabled || isLoadingPlanDetails}
+									/>
+								</div>
+							</AccordionContent>
+						</AccordionItem>
+
+						<AccordionItem value='proration'>
+							<AccordionTrigger className='px-5 py-4'>
+								<span className='flex min-w-0 flex-1 items-center'>
+									<span className='min-w-0 flex-1 truncate'>{t('organisms.subscriptionForm.prorationBehavior')}</span>
+									<span className='ms-auto flex shrink-0 items-center ps-2'>
+										<BillingAccordionInfoTooltip
+											ariaLabel={t('organisms.subscriptionForm.aboutProrationAria')}
+											description={t('organisms.subscriptionForm.prorationHelp')}
+										/>
+									</span>
+								</span>
+							</AccordionTrigger>
+							<AccordionContent className='border-t border-line-zinc-subtle bg-surface px-5 pb-5 pt-4'>
+								<div className='flex flex-row items-center justify-between gap-4 w-full'>
+									<p className='text-[13px] leading-relaxed text-content-zinc-tertiary min-w-0 flex-1'>
+										{t('organisms.subscriptionForm.prorationInline')}
+									</p>
+									<Switch
+										id='subscription-billing-proration'
+										className='shrink-0'
+										checked={state.prorationCreateLineItems}
+										onCheckedChange={(checked) => setState((prev) => ({ ...prev, prorationCreateLineItems: checked }))}
+										disabled={isDisabled}
+									/>
+								</div>
+							</AccordionContent>
+						</AccordionItem>
+
+						<AccordionItem value='auto-invoice'>
+							<AccordionTrigger className='px-5 py-4'>
+								<span className='flex min-w-0 flex-1 items-center'>
+									<span className='min-w-0 flex-1 truncate'>{t('organisms.subscriptionForm.autoInvoiceThreshold')}</span>
+									<span className='ms-auto flex shrink-0 items-center ps-2'>
+										<BillingAccordionInfoTooltip
+											ariaLabel={t('organisms.subscriptionForm.aboutAutoInvoiceAria')}
+											description={t('organisms.subscriptionForm.autoInvoiceHelp')}
+										/>
+									</span>
+								</span>
+							</AccordionTrigger>
+							<AccordionContent className='border-t border-line-zinc-subtle bg-surface px-5 pb-5 pt-4'>
+								<div className='flex-1 min-w-[12rem] max-w-md'>
+									<DecimalUsageInput
+										id='subscription-billing-auto-invoice-threshold-amount'
+										ariaLabel={t('organisms.subscriptionForm.autoInvoiceAmountAria')}
+										suffix={state.currency ? getCurrencySymbol(state.currency) : undefined}
+										value={state.autoInvoiceThreshold}
+										onChange={(value) => setState((prev) => ({ ...prev, autoInvoiceThreshold: value }))}
+										placeholder={t('organisms.subscriptionForm.autoInvoicePlaceholder')}
+										disabled={isDisabled || isLoadingPlanDetails || hasFixedSubscriptionChargePrice}
+										precision={2}
+										min={0}
+									/>
+								</div>
+							</AccordionContent>
+						</AccordionItem>
+					</Accordion>
+				</div>
+			)}
+		</div>
+	);
+};
+
+export default SubscriptionForm;

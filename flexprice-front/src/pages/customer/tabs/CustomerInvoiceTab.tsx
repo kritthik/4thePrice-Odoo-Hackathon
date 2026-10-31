@@ -1,0 +1,112 @@
+import { AddButton, Card, CardHeader, Loader, NoDataCard, ShortPagination, Tooltip } from '@/components/atoms';
+import { ApiDocsContent, CustomerInvoiceTable } from '@/components/molecules';
+import { API_DOCS_TAGS } from '@/constants/apiDocsTags';
+import InvoiceApi from '@/api/InvoiceApi';
+import CustomerApi from '@/api/CustomerApi';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate, useParams, useOutletContext } from 'react-router';
+import { InvoiceListItem } from '@/types/dto';
+import { RouteNames } from '@/core/routes/Routes';
+import { useMemo } from 'react';
+import Customer from '@/models/Customer';
+import usePagination from '@/hooks/usePagination';
+import { useTranslation } from 'react-i18next';
+import { useCurrentUserPermissions } from '@/hooks/useCurrentUserPermissions';
+
+const CustomerInvoiceTab = () => {
+	const { t } = useTranslation('customers');
+	const { id: customerId } = useParams();
+	const navigate = useNavigate();
+	const { limit, offset, page } = usePagination();
+	const { can, isLoading: permissionsLoading } = useCurrentUserPermissions();
+	const canWriteInvoice = can('invoice', 'write');
+
+	const { data, isLoading } = useQuery({
+		queryKey: ['invoice', customerId, page],
+		queryFn: async () => {
+			return await InvoiceApi.getCustomerInvoices(customerId!, { limit, offset });
+		},
+		enabled: !!customerId,
+	});
+
+	// Collect subscription customer IDs that differ from the current customer
+	const subCustIds = useMemo(() => {
+		const ids = new Set<string>();
+		for (const inv of data?.items ?? []) {
+			if (inv.subscription_customer_id && inv.subscription_customer_id !== inv.customer_id) {
+				ids.add(inv.subscription_customer_id);
+			}
+		}
+		return [...ids];
+	}, [data?.items]);
+
+	const { data: subCustomersData } = useQuery({
+		queryKey: ['subscriptionCustomers', subCustIds],
+		queryFn: async () => {
+			const res = await CustomerApi.getCustomers({ customer_ids: subCustIds, limit: subCustIds.length });
+			return res.items ?? [];
+		},
+		enabled: subCustIds.length > 0,
+	});
+
+	const enrichedInvoices = useMemo(() => {
+		if (!data?.items) return [];
+		const custMap = new Map<string, Customer>();
+		for (const c of subCustomersData ?? []) {
+			custMap.set(c.id, c);
+		}
+		return data.items.map((inv) => {
+			if (inv.subscription_customer_id && inv.subscription_customer_id !== inv.customer_id) {
+				return { ...inv, subscription_customer: custMap.get(inv.subscription_customer_id) };
+			}
+			return inv;
+		});
+	}, [data?.items, subCustomersData]);
+
+	const { isArchived } = useOutletContext<{ isArchived: boolean }>();
+
+	const handleShowDetails = (invoice: InvoiceListItem) => {
+		navigate(`${invoice.id}`);
+	};
+
+	const addInvoiceButton = canWriteInvoice ? (
+		<AddButton
+			label={t('tabPanels.invoice.addInvoice')}
+			onClick={() => {
+				navigate(`${RouteNames.customers}/${customerId}/invoices/create`);
+			}}
+		/>
+	) : (
+		<Tooltip content={t('tabPanels.invoice.writeDeniedTooltip')}>
+			<span tabIndex={0} className='inline-block cursor-not-allowed'>
+				<AddButton disabled label={t('tabPanels.invoice.addInvoice')} />
+			</span>
+		</Tooltip>
+	);
+
+	if (isLoading || permissionsLoading) {
+		return <Loader />;
+	}
+
+	if (data?.items?.length === 0) {
+		return (
+			<NoDataCard
+				title={t('tabPanels.invoice.title')}
+				subtitle={t('tabPanels.invoice.emptySubtitle')}
+				cta={!isArchived && addInvoiceButton}
+			/>
+		);
+	}
+	return (
+		<div>
+			<ApiDocsContent tags={API_DOCS_TAGS.Invoices} />
+			<Card variant='notched'>
+				<CardHeader title={t('tabPanels.invoice.title')} cta={!isArchived && addInvoiceButton} />
+				<CustomerInvoiceTable onRowClick={handleShowDetails} customerId={customerId} data={enrichedInvoices} />
+				<ShortPagination unit={t('tabPanels.invoice.paginationUnit')} totalItems={data?.pagination.total ?? 0} />
+			</Card>
+		</div>
+	);
+};
+
+export default CustomerInvoiceTab;

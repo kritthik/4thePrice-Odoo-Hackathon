@@ -1,0 +1,100 @@
+import { config as appConfig, APP_ENV } from '@/config/config';
+
+export enum LogLevel {
+	INFO = 'info',
+	WARN = 'warn',
+	ERROR = 'error',
+	DEBUG = 'debug',
+}
+
+interface LoggerConfig {
+	enabledEnvironments: APP_ENV[];
+	showTimestamp?: boolean;
+	showLogLevel?: boolean;
+}
+
+class Logger {
+	private static instance: Logger;
+	private config: LoggerConfig;
+	private isEnabled: boolean;
+
+	private constructor(
+		config: LoggerConfig = {
+			enabledEnvironments: [APP_ENV.Local, APP_ENV.Development, APP_ENV.Production],
+			showTimestamp: true,
+			showLogLevel: true,
+		},
+	) {
+		this.config = config;
+		this.isEnabled = this.checkIfEnabled();
+	}
+
+	public static getInstance(config?: LoggerConfig): Logger {
+		if (!Logger.instance) {
+			Logger.instance = new Logger(config);
+		}
+		return Logger.instance;
+	}
+
+	private checkIfEnabled(): boolean {
+		return this.config.enabledEnvironments.includes(appConfig.app.env);
+	}
+
+	private formatMessage(level: LogLevel, ...args: unknown[]): string {
+		const parts: string[] = [];
+
+		if (this.config.showTimestamp) {
+			parts.push(`[${new Date().toISOString()}]`);
+		}
+
+		if (this.config.showLogLevel) {
+			parts.push(`[${level.toUpperCase()}]`);
+		}
+
+		parts.push(
+			...args.map((arg) => {
+				if (arg instanceof Error) {
+					return arg.stack || `${arg.name}: ${arg.message}`;
+				}
+				// Error objects serialize to "{}" via JSON.stringify (message/stack/name are
+				// non-enumerable), so they're special-cased above rather than falling through here.
+				return typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg);
+			}),
+		);
+
+		return parts.join(' ');
+	}
+
+	public info(...args: unknown[]): void {
+		if (this.isEnabled) {
+			console.info(this.formatMessage(LogLevel.INFO, ...args));
+		}
+	}
+
+	public warn(...args: unknown[]): void {
+		if (this.isEnabled) {
+			console.warn(this.formatMessage(LogLevel.WARN, ...args));
+		}
+	}
+
+	public error(...args: unknown[]): void {
+		console.error(this.formatMessage(LogLevel.ERROR, ...args));
+	}
+
+	public debug(...args: unknown[]): void {
+		if (this.isEnabled) {
+			console.debug(this.formatMessage(LogLevel.DEBUG, ...args));
+		}
+	}
+
+	public setConfig(newConfig: Partial<LoggerConfig>): void {
+		this.config = { ...this.config, ...newConfig };
+		this.isEnabled = this.checkIfEnabled();
+	}
+}
+
+// Singleton export
+export const logger = Logger.getInstance();
+
+// Export class for custom use
+export { Logger };

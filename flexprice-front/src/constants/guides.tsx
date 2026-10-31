@@ -1,0 +1,366 @@
+import { TutorialItem } from '@/pages';
+import type { TFunction } from 'i18next';
+
+/** Doc deep links opened from tutorial cards */
+export enum DOCS_LINKS {
+	SETTINGS_CUSTOM_CURRENCY = '/settings',
+	SETTINGS_SUBSCRIPTION = '/settings',
+	SETTINGS_INVOICE = '/settings',
+	SETTINGS_TAX = '/settings',
+
+	FEATURE_CREATE = '/product-catalog/features/create',
+	FEATURE_PLANS = '/product-catalog/plans',
+	FEATURE_USECASE = '/product-catalog/features',
+
+	PLANS_OVERVIEW = '/product-catalog/plans',
+	PLANS_CREATE = '/product-catalog/plans',
+	PLANS_CHARGES = '/product-catalog/plans',
+
+	CUSTOMER_OVERVIEW = '/customers',
+	CUSTOMER_ARCHIVE = '/customers',
+	SUBSCRIPTION_CREATE = '/subscriptions',
+
+	INVOICE_CREATE = '/billing/invoices',
+	INVOICE_MANAGE = '/billing/invoices',
+	INVOICE_PARTIAL = '/billing/invoices',
+
+	PAYMENT_CREATE = '/billing/payments',
+	PAYMENT_UPDATE = '/billing/payments',
+	PAYMENT_DELETE = '/billing/payments',
+
+	SECRET_LIST = '/developer/api-keys',
+	SECRET_CREATE = '/developer/api-keys',
+	SECRET_DELETE = '/developer/api-keys',
+
+	CREDIT_CREATE = '/billing/credit-notes',
+	CREDIT_PROCESS = '/billing/credit-notes',
+	CREDIT_VOID = '/billing/credit-notes',
+
+	TASK_LIST = '/tools/imports',
+	TASK_CREATE = '/tools/imports',
+	TASK_PROCESS = '/tools/imports',
+
+	TAX_OVERVIEW = '/customers/taxes',
+	TAX_TYPES = '/customers/taxes',
+	TAX_ASSOCIATIONS = '/customers/taxes',
+
+	GROUPS = '/product-catalog/plans',
+
+	ADDON_CREATE = '/product-catalog/addons',
+	ADDON_LIST = '/product-catalog/addons',
+	ADDON_DELETE = '/product-catalog/addons',
+
+	COUPON_CREATE = '/product-catalog/coupons',
+	COUPON_UPDATE = '/product-catalog/coupons',
+	COUPON_DELETE = '/product-catalog/coupons',
+}
+
+export enum IMAGE_URLS {
+	FEATURE_1 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180993/FEATURES1_veomrd.svg',
+	FEATURE_2 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180989/Features2_fbd39s.svg',
+	FEATURE_3 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180994/FEATURES_3_drkhb7.svg',
+
+	PLAN_1 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180993/PLAN_1_j6tdqv.svg',
+	PLAN_2 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180993/PLAN_2_oxi9ld.svg',
+	PLAN_3 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180995/PLAN_3_lfh1mi.svg',
+
+	CUSTOMER_1 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180990/Customer_1_kf0ena.svg',
+	CUSTOMER_2 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180991/Customer_2_ifiaof.svg',
+	CUSTOMER_3 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180987/Customer_3_triyiv.svg',
+
+	INVOICE_1 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180993/Invoice_1_lh9ved.svg',
+	INVOICE_2 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180991/invoice_2_v8fa71.svg',
+	INVOICE_3 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180989/iNvoice_3_glq1xo.svg',
+
+	PAYMENT_1 = 'https://res.cloudinary.com/daospvham/image/upload/v1753182361/PAYMENTS_1_dgx00f.svg',
+	PAYMENT_2 = 'https://res.cloudinary.com/daospvham/image/upload/v1753182361/PAYMENTS_2_ugsdxt.svg',
+	PAYMENT_3 = 'https://res.cloudinary.com/daospvham/image/upload/v1753203616/PAYMENTS_3_erwdgn_gxkrxv.svg',
+
+	SECRET_1 = 'https://res.cloudinary.com/daospvham/image/upload/v1753189165/api1_egeb4f.svg',
+	SECRET_2 = 'https://res.cloudinary.com/daospvham/image/upload/v1753204234/api2_gxkyqw.svg',
+	SECRET_3 = 'https://res.cloudinary.com/daospvham/image/upload/v1753184051/api3_ahcbx.svg',
+
+	CREDIT_1 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180987/CN1_vkg2kh.svg',
+	CREDIT_2 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180988/CN2_gpeaqi.svg',
+	CREDIT_3 = 'https://res.cloudinary.com/daospvham/image/upload/v1753180987/CN3_kpsfpv.svg',
+
+	TASK_1 = 'https://res.cloudinary.com/daospvham/image/upload/v1753189165/TASK1_cpgjla.svg',
+	TASK_2 = 'https://res.cloudinary.com/daospvham/image/upload/v1753182361/TASKS_2_emkpmn.svg',
+	TASK_3 = 'https://res.cloudinary.com/daospvham/image/upload/v1753189166/TASKS_3_k2nkyu.svg',
+}
+
+const openGuide = (url: string) => {
+	window.location.href = url || '/home';
+};
+
+export type GuidesMap = Record<string, { tutorials: TutorialItem[] }>;
+
+/**
+ * Localized empty-state / tutorial cards. Pass `t` from `useTranslation('guides')`
+ * (or a combined hook where `guides` is loaded).
+ */
+export function buildGuides(t: TFunction<'guides'>): GuidesMap {
+	return {
+		features: {
+			tutorials: [
+				{
+					imageUrl: IMAGE_URLS.FEATURE_1,
+					title: t('features.createFeature.title'),
+					description: t('features.createFeature.description'),
+					onClick: () => openGuide(DOCS_LINKS.FEATURE_CREATE),
+				},
+				{
+					imageUrl: IMAGE_URLS.FEATURE_2,
+					title: t('features.linkToPlans.title'),
+					description: t('features.linkToPlans.description'),
+					onClick: () => openGuide(DOCS_LINKS.FEATURE_PLANS),
+				},
+				{
+					imageUrl: IMAGE_URLS.FEATURE_3,
+					title: t('features.clonePricing.title'),
+					description: t('features.clonePricing.description'),
+					onClick: () => openGuide(DOCS_LINKS.FEATURE_USECASE),
+				},
+			],
+		},
+		addons: {
+			tutorials: [
+				{
+					imageUrl: IMAGE_URLS.PLAN_1,
+					title: t('addons.create.title'),
+					description: t('addons.create.description'),
+					onClick: () => openGuide(DOCS_LINKS.ADDON_CREATE),
+				},
+				{
+					imageUrl: IMAGE_URLS.PLAN_2,
+					title: t('addons.list.title'),
+					description: t('addons.list.description'),
+					onClick: () => openGuide(DOCS_LINKS.ADDON_LIST),
+				},
+				{
+					imageUrl: IMAGE_URLS.PLAN_3,
+					title: t('addons.delete.title'),
+					description: t('addons.delete.description'),
+					onClick: () => openGuide(DOCS_LINKS.ADDON_DELETE),
+				},
+			],
+		},
+		coupons: {
+			tutorials: [
+				{
+					imageUrl: IMAGE_URLS.PLAN_1,
+					title: t('coupons.create.title'),
+					description: t('coupons.create.description'),
+					onClick: () => openGuide(DOCS_LINKS.COUPON_CREATE),
+				},
+				{
+					imageUrl: IMAGE_URLS.PLAN_2,
+					title: t('coupons.update.title'),
+					description: t('coupons.update.description'),
+					onClick: () => openGuide(DOCS_LINKS.COUPON_UPDATE),
+				},
+				{
+					imageUrl: IMAGE_URLS.PLAN_3,
+					title: t('coupons.delete.title'),
+					description: t('coupons.delete.description'),
+					onClick: () => openGuide(DOCS_LINKS.COUPON_DELETE),
+				},
+			],
+		},
+		plans: {
+			tutorials: [
+				{
+					imageUrl: IMAGE_URLS.PLAN_1,
+					title: t('plans.overview.title'),
+					description: t('plans.overview.description'),
+					onClick: () => openGuide(DOCS_LINKS.PLANS_OVERVIEW),
+				},
+				{
+					title: t('plans.create.title'),
+					imageUrl: IMAGE_URLS.PLAN_2,
+					description: t('plans.create.description'),
+					onClick: () => openGuide(DOCS_LINKS.PLANS_CREATE),
+				},
+				{
+					imageUrl: IMAGE_URLS.PLAN_3,
+					title: t('plans.billingModels.title'),
+					description: t('plans.billingModels.description'),
+					onClick: () => openGuide(DOCS_LINKS.PLANS_CHARGES),
+				},
+			],
+		},
+		groups: {
+			tutorials: [
+				{
+					imageUrl: IMAGE_URLS.PLAN_3,
+					title: t('groups.overview.title'),
+					description: t('groups.overview.description'),
+					onClick: () => openGuide(DOCS_LINKS.GROUPS),
+				},
+				{
+					imageUrl: IMAGE_URLS.PLAN_1,
+					title: t('groups.plansContext.title'),
+					description: t('groups.plansContext.description'),
+					onClick: () => openGuide(DOCS_LINKS.PLANS_OVERVIEW),
+				},
+				{
+					imageUrl: IMAGE_URLS.FEATURE_1,
+					title: t('groups.featuresContext.title'),
+					description: t('groups.featuresContext.description'),
+					onClick: () => openGuide(DOCS_LINKS.FEATURE_CREATE),
+				},
+			],
+		},
+		customers: {
+			tutorials: [
+				{
+					title: t('customers.create.title'),
+					description: t('customers.create.description'),
+					imageUrl: IMAGE_URLS.CUSTOMER_1,
+					onClick: () => openGuide(DOCS_LINKS.CUSTOMER_OVERVIEW),
+				},
+				{
+					title: t('customers.archive.title'),
+					imageUrl: IMAGE_URLS.CUSTOMER_2,
+					description: t('customers.archive.description'),
+					onClick: () => openGuide(DOCS_LINKS.CUSTOMER_ARCHIVE),
+				},
+				{
+					title: t('customers.subscription.title'),
+					imageUrl: IMAGE_URLS.CUSTOMER_3,
+					description: t('customers.subscription.description'),
+					onClick: () => openGuide(DOCS_LINKS.SUBSCRIPTION_CREATE),
+				},
+			],
+		},
+		invoices: {
+			tutorials: [
+				{
+					title: t('invoices.create.title'),
+					description: t('invoices.create.description'),
+					imageUrl: IMAGE_URLS.INVOICE_1,
+					onClick: () => openGuide(DOCS_LINKS.INVOICE_CREATE),
+				},
+				{
+					title: t('invoices.manage.title'),
+					description: t('invoices.manage.description'),
+					imageUrl: IMAGE_URLS.INVOICE_2,
+					onClick: () => openGuide(DOCS_LINKS.INVOICE_MANAGE),
+				},
+				{
+					title: t('invoices.partialPayments.title'),
+					description: t('invoices.partialPayments.description'),
+					imageUrl: IMAGE_URLS.INVOICE_3,
+					onClick: () => openGuide(DOCS_LINKS.INVOICE_PARTIAL),
+				},
+			],
+		},
+		payments: {
+			tutorials: [
+				{
+					title: t('payments.create.title'),
+					imageUrl: IMAGE_URLS.PAYMENT_1,
+					description: t('payments.create.description'),
+					onClick: () => openGuide(DOCS_LINKS.PAYMENT_CREATE),
+				},
+				{
+					title: t('payments.update.title'),
+					imageUrl: IMAGE_URLS.PAYMENT_2,
+					description: t('payments.update.description'),
+					onClick: () => openGuide(DOCS_LINKS.PAYMENT_UPDATE),
+				},
+				{
+					title: t('payments.delete.title'),
+					imageUrl: IMAGE_URLS.PAYMENT_3,
+					description: t('payments.delete.description'),
+					onClick: () => openGuide(DOCS_LINKS.PAYMENT_DELETE),
+				},
+			],
+		},
+		secrets: {
+			tutorials: [
+				{
+					title: t('secrets.list.title'),
+					imageUrl: IMAGE_URLS.SECRET_1,
+					description: t('secrets.list.description'),
+					onClick: () => openGuide(DOCS_LINKS.SECRET_LIST),
+				},
+				{
+					title: t('secrets.create.title'),
+					imageUrl: IMAGE_URLS.SECRET_2,
+					description: t('secrets.create.description'),
+					onClick: () => openGuide(DOCS_LINKS.SECRET_CREATE),
+				},
+				{
+					title: t('secrets.delete.title'),
+					imageUrl: IMAGE_URLS.SECRET_3,
+					description: t('secrets.delete.description'),
+					onClick: () => openGuide(DOCS_LINKS.SECRET_DELETE),
+				},
+			],
+		},
+		creditNotes: {
+			tutorials: [
+				{
+					title: t('creditNotes.create.title'),
+					imageUrl: IMAGE_URLS.CREDIT_1,
+					description: t('creditNotes.create.description'),
+					onClick: () => openGuide(DOCS_LINKS.CREDIT_CREATE),
+				},
+				{
+					title: t('creditNotes.process.title'),
+					description: t('creditNotes.process.description'),
+					imageUrl: IMAGE_URLS.CREDIT_2,
+					onClick: () => openGuide(DOCS_LINKS.CREDIT_PROCESS),
+				},
+				{
+					title: t('creditNotes.void.title'),
+					description: t('creditNotes.void.description'),
+					imageUrl: IMAGE_URLS.CREDIT_3,
+					onClick: () => openGuide(DOCS_LINKS.CREDIT_VOID),
+				},
+			],
+		},
+		importExport: {
+			tutorials: [
+				{
+					title: t('importExport.overview.title'),
+					imageUrl: IMAGE_URLS.TASK_1,
+					description: t('importExport.overview.description'),
+					onClick: () => openGuide(DOCS_LINKS.TASK_LIST),
+				},
+				{
+					title: t('importExport.importFile.title'),
+					imageUrl: IMAGE_URLS.TASK_2,
+					description: t('importExport.importFile.description'),
+					onClick: () => openGuide(DOCS_LINKS.TASK_CREATE),
+				},
+				{
+					title: t('importExport.processTask.title'),
+					imageUrl: IMAGE_URLS.TASK_3,
+					description: t('importExport.processTask.description'),
+					onClick: () => openGuide(DOCS_LINKS.TASK_PROCESS),
+				},
+			],
+		},
+		taxes: {
+			tutorials: [
+				{
+					title: t('taxes.createRate.title'),
+					description: t('taxes.createRate.description'),
+					onClick: () => openGuide(DOCS_LINKS.TAX_OVERVIEW),
+				},
+				{
+					title: t('taxes.types.title'),
+					description: t('taxes.types.description'),
+					onClick: () => openGuide(DOCS_LINKS.TAX_TYPES),
+				},
+				{
+					title: t('taxes.associations.title'),
+					description: t('taxes.associations.description'),
+					onClick: () => openGuide(DOCS_LINKS.TAX_ASSOCIATIONS),
+				},
+			],
+		},
+	};
+}

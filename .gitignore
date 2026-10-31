@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+**/node_modules/
+vendor/
+
+# Build and distribution outputs
+dist/
+dist-ssr/
+build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+server
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.vault
+!.env.project
+.secrets
+*.local
+
+# IDE and OS files
+.DS_Store
+Thumbs.db
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+tsconfig.tsbuildinfo
+tsconfig.app.tsbuildinfo
+
+# Test & coverage results
+coverage/
+*.cover
+*.coverprofile
+*.cov
+coverage.out
+coverage.html
+playwright-report/
+test-results/
+.gocache/
+.gomodcache/
+

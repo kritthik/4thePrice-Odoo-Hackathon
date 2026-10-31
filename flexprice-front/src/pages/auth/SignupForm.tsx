@@ -1,0 +1,229 @@
+import React, { useEffect, useState } from 'react';
+import { Button, Input } from '@/components/atoms';
+import toast from 'react-hot-toast';
+import supabase from '@/core/services/supbase/config';
+import AuthApi from '@/api/AuthApi';
+import { useMutation } from '@tanstack/react-query';
+import { EyeOff } from 'lucide-react';
+import { EyeIcon } from 'lucide-react';
+import { RouteNames } from '@/core/routes/Routes';
+import { useNavigate, useSearchParams } from 'react-router';
+import { config, APP_ENV } from '@/config/config';
+import GoogleSignin from './GoogleSignin';
+import { AuthTab } from './authTabs';
+import { useTranslation } from 'react-i18next';
+import { buildSignupMetadata, persistSignupMetadata } from '@/utils/auth/signupMetadata';
+import { buildAuthRedirect } from '@/utils/auth/authRedirect';
+
+interface SignupFormProps {
+	switchTab: (tab: AuthTab) => void;
+}
+
+interface SignupData {
+	email: string;
+	password: string;
+	confirmPassword: string;
+}
+
+const SignupForm: React.FC<SignupFormProps> = ({ switchTab }) => {
+	const { t } = useTranslation('auth');
+	const navigate = useNavigate();
+
+	const [searchParams] = useSearchParams();
+	const queryEmail = searchParams.get('email') || '';
+
+	const [signupData, setSignupData] = useState<SignupData>({
+		email: queryEmail,
+		password: '',
+		confirmPassword: '',
+	});
+
+	const [isLoading, setIsLoading] = useState(false);
+
+	useEffect(() => {
+		persistSignupMetadata(buildSignupMetadata({ signup_method: 'email' }));
+	}, []);
+
+	useEffect(() => {
+		if (queryEmail) {
+			setSignupData({ ...signupData, email: queryEmail });
+		}
+	}, [queryEmail]);
+
+	const [showPassword, setShowPassword] = useState(false);
+	const [errors, setErrors] = useState<Partial<SignupData>>({});
+
+	// Use React Query for signup mutation
+	const { mutate: signup, isPending: isSignupPending } = useMutation({
+		mutationFn: async () => {
+			return await AuthApi.Signup({
+				email: signupData.email,
+				password: signupData.password,
+				metadata: buildSignupMetadata({ signup_method: 'email' }),
+			});
+		},
+		onSuccess: (data) => {
+			if (config.app.env !== APP_ENV.SelfHosted) {
+				toast.success('Account created successfully! Please check your email to confirm your account.');
+				switchTab(AuthTab.LOGIN);
+			} else {
+				// Store token in a consistent format
+				const tokenData = {
+					token: data.token,
+					user_id: data.user_id,
+					tenant_id: data.tenant_id,
+				};
+				localStorage.setItem('token', JSON.stringify(tokenData));
+				navigate(RouteNames.home);
+			}
+		},
+
+		onError: (error: Error) => {
+			toast.error(error.message || 'An unexpected error occurred during signup');
+		},
+	});
+
+	const validateForm = () => {
+		let isValid = true;
+
+		// Email validation
+		if (!signupData.email) {
+			setErrors({ email: 'Email is required' });
+			isValid = false;
+		} else if (!/\S+@\S+\.\S+/.test(signupData.email)) {
+			setErrors({ ...errors, email: 'Please enter a valid email address' });
+			isValid = false;
+		}
+
+		// Password validation
+		if (!signupData.password) {
+			setErrors({ password: 'Password is required' });
+			isValid = false;
+		} else if (signupData.password.length < 6) {
+			setErrors({ ...errors, password: 'Password must be at least 6 characters long' });
+			isValid = false;
+		}
+
+		// Confirm password validation
+		if (!signupData.confirmPassword) {
+			setErrors({ ...errors, confirmPassword: 'Please confirm your password' });
+			isValid = false;
+		} else if (signupData.password !== signupData.confirmPassword) {
+			setErrors({ ...errors, confirmPassword: 'Passwords do not match' });
+			isValid = false;
+		}
+
+		return isValid;
+	};
+
+	const handleSignup = async () => {
+		if (!config.platform.signup.enabled) {
+			toast.error(t('signupDisabled'));
+			navigate('/auth');
+			return;
+		}
+		// Validate form
+		if (!validateForm()) {
+			return;
+		}
+		if (config.app.env !== APP_ENV.SelfHosted) {
+			persistSignupMetadata(buildSignupMetadata({ signup_method: 'email' }));
+			setIsLoading(true);
+			const { error } = await supabase.auth.signUp({
+				email: signupData.email,
+				password: signupData.password,
+				options: {
+					emailRedirectTo: buildAuthRedirect(RouteNames.signupConfirmation),
+				},
+			});
+			setIsLoading(false);
+
+			if (error) {
+				toast.error(error.message || 'Something went wrong');
+				return;
+			}
+			navigate(`/auth/verify-email?email=${encodeURIComponent(signupData.email)}&new=true`);
+		} else {
+			signup();
+		}
+	};
+
+	return (
+		<>
+			<div className='space-y-4'>
+				<Input
+					id='email'
+					name='email'
+					type='email'
+					autoComplete='email'
+					label={t('fields.email')}
+					placeholder={t('fields.emailPlaceholder')}
+					required
+					onChange={(s) => setSignupData({ ...signupData, email: s })}
+					value={signupData.email}
+					error={errors.email}
+				/>
+
+				<Input
+					id='password'
+					name='password'
+					autoComplete='new-password'
+					label={t('fields.password')}
+					placeholder={t('fields.passwordPlaceholder')}
+					required
+					onChange={(s) => setSignupData({ ...signupData, password: s })}
+					value={signupData.password}
+					error={errors.password}
+					type={showPassword ? 'text' : 'password'}
+					suffix={
+						<span onClick={() => setShowPassword(!showPassword)} className='cursor-pointer'>
+							{showPassword ? <EyeIcon className='w-5 h-5' /> : <EyeOff className='w-5 h-5' />}
+						</span>
+					}
+				/>
+
+				<Input
+					id='confirmPassword'
+					name='confirmPassword'
+					autoComplete='new-password'
+					label={t('fields.confirmPassword')}
+					placeholder={t('fields.confirmPasswordPlaceholder')}
+					required
+					onChange={(s) => setSignupData({ ...signupData, confirmPassword: s })}
+					value={signupData.confirmPassword}
+					error={errors.confirmPassword}
+					type={showPassword ? 'text' : 'password'}
+					suffix={
+						<span onClick={() => setShowPassword(!showPassword)} className='cursor-pointer'>
+							{showPassword ? <EyeIcon className='w-5 h-5' /> : <EyeOff className='w-5 h-5' />}
+						</span>
+					}
+				/>
+				<Button onClick={handleSignup} className='w-full !mt-6 h-11' isLoading={isSignupPending || isLoading}>
+					{t('buttons.createAccount')}
+				</Button>
+			</div>
+
+			{/* Google Sign-in Button - Only show on login and signup tabs */}
+			{config.app.env !== APP_ENV.SelfHosted && (
+				<>
+					<div className='flex items-center justify-center my-6'>
+						<div className='flex-1 h-px bg-surface-strong'></div>
+						<span className='mx-4 text-sm text-content-muted'>{t('divider')}</span>
+						<div className='flex-1 h-px bg-surface-strong'></div>
+					</div>
+					<GoogleSignin />
+				</>
+			)}
+
+			<p className='mt-6 text-center text-sm text-content-tertiary'>
+				{t('hasAccount')}{' '}
+				<button onClick={() => switchTab(AuthTab.LOGIN)} className='text-grey-600 underline font-medium'>
+					{t('links.logIn')}
+				</button>
+			</p>
+		</>
+	);
+};
+
+export default SignupForm;

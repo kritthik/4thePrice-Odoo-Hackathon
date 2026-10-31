@@ -1,0 +1,1953 @@
+{
+	"page": {
+		"settings": "Settings",
+		"billing": "Billing"
+	},
+	"info": {
+		"ariaLabel": "More information about {{field}}"
+	},
+	"docs": {
+		"docsLink": "Docs",
+		"openDocsTitle": "Open {{name}} docs"
+	},
+	"superAdmin": {
+		"writeDeniedTooltip": "Only a Super Admin can change this setting. Ask a tenant admin for access."
+	},
+	"members": {
+		"writeDeniedTooltip": "You don't have permission to invite team members. Ask a tenant admin for access.",
+		"roleAdmin": "Admin",
+		"roleMember": "Member",
+		"errors": {
+			"userLimitReached": "User limit reached for this organization.",
+			"userAlreadyExists": "A user with this email already exists!",
+			"failedToAddUser": "Failed to add user",
+			"failedToLoadUsers": "Failed to load users",
+			"enterEmail": "Enter an email address",
+			"emailInvalid": "Please enter a valid email address",
+			"copyFailed": "Could not copy to clipboard",
+			"credentialsCopied": "Credentials copied to clipboard.",
+			"credentialsDownloaded": "Credentials downloaded.",
+			"loadError": "Failed to load users. Please try again.",
+			"passwordLinkFailed": "Could not create the link. Try again."
+		},
+		"columns": {
+			"email": "Email",
+			"role": "Role",
+			"joined": "Joined"
+		},
+		"cardTitle": "Users",
+		"usersCount_one": "{{count}} user",
+		"usersCount_other": "{{count}} users",
+		"actions": {
+			"add": "Add",
+			"invite": "Invite",
+			"remove": "Remove",
+			"editRoles": "Edit roles",
+			"resetPassword": "Reset password"
+		},
+		"editRoles": {
+			"title": "Edit roles",
+			"description": "Manage access for this user.",
+			"submit": "Save roles",
+			"success": "Roles updated for {{email}}.",
+			"failedGeneric": "Failed to update roles.",
+			"activeKeysBody_one": "This user has {{count}} active API key that must be expired before their roles can change:",
+			"activeKeysBody_other": "This user has {{count}} active API keys that must be expired before their roles can change:",
+			"typeUser": "User",
+			"typeServiceAccount": "Service Account",
+			"noRoles": "No roles",
+			"userFetchFailed": "Couldn't refresh this user's latest data — showing the last known details."
+		},
+		"filters": {
+			"title": "Filter users",
+			"role": "Role",
+			"status": "Status",
+			"all": "All",
+			"joined": "Joined",
+			"pending": "Pending"
+		},
+		"joinedPending": "Pending",
+		"addMember": {
+			"title": "Add member",
+			"description": "Invite a new team member by email.",
+			"emailLabel": "Email",
+			"emailPlaceholder": "user@example.com",
+			"addUser": "Add user",
+			"rolesLabel": "Roles",
+			"rolesHint": "Choose at least one role for this member. Selecting Super Admin grants full access and clears other selections.",
+			"rolesLoading": "Loading roles...",
+			"rolesUnavailable": "Couldn't load available roles.",
+			"rolesRetry": "Retry",
+			"rolesRequired": "Select at least one role"
+		},
+		"addUser": {
+			"title": "Add user",
+			"description": "Add a new user and generate login credentials.",
+			"nameLabel": "Name",
+			"namePlaceholder": "Jane Doe",
+			"emailLabel": "Email",
+			"emailPlaceholder": "user@example.com",
+			"submit": "Add user"
+		},
+		"invite": {
+			"title": "Invite user",
+			"description": "Invite a user by email and generate login credentials to share.",
+			"nameLabel": "Name",
+			"namePlaceholder": "Jane Doe",
+			"submit": "Invite user"
+		},
+		"passwordLink": {
+			"inviteTitle": "Invite link",
+			"resetTitle": "Password reset link",
+			"description": "Send this link to {{email}}. It works once and expires on {{expiry}}.",
+			"copy": "Copy link",
+			"copied": "Link copied",
+			"note": "You won't see this link again. If it's lost, create a new one from the member's menu."
+		},
+		"credentials": {
+			"title": "Login Credentials",
+			"description": "Share these with the new user so they can sign in.",
+			"emailCopied": "Email copied",
+			"copyEmail": "Copy email",
+			"password": "Password",
+			"hidePassword": "Hide password",
+			"showPassword": "Show password",
+			"copyPassword": "Copy password",
+			"downloadCsv": "Download CSV",
+			"copyAll": "Copy all",
+			"passwordResetNote": "This password can be reset later.",
+			"signInMethodsNote": "User can sign in with email/password or Google.",
+			"csvHeader": "email,password",
+			"copyBlockEmailLine": "Email: {{email}}",
+			"copyBlockPasswordLine": "Password: {{password}}"
+		},
+		"tabs": {
+			"team": "Team"
+		},
+		"unitUsers_one": "user",
+		"unitUsers_other": "users"
+	},
+	"organization": {
+		"writeDeniedTooltip": "You don't have permission to edit the organization. Ask a tenant admin for access.",
+		"title": "Organization",
+		"workspaceOwner": "Workspace owner",
+		"editOrganization": "Edit organization"
+	},
+	"billing": {
+		"tabs": {
+			"billing": "Billing"
+		},
+		"actions": {
+			"resetToDefaults": "Reset to defaults"
+		},
+		"invoiceConfiguration": {
+			"actions": {
+				"docs": "Docs",
+				"docsTitle": "Open invoice configuration docs"
+			},
+			"title": "Invoice configuration",
+			"previewLabel": "Preview",
+			"nextInvoiceNumber": "Next invoice number",
+			"infoAria": "More information about {{field}}",
+			"saveSuccess": "Invoice configuration saved",
+			"saveError": "Failed to save invoice configuration",
+			"resetSuccess": "Invoice configuration reset to defaults",
+			"resetError": "Failed to reset invoice configuration",
+			"validation": {
+				"prefixRequired": "Prefix is required",
+				"timezoneRequired": "Timezone is required",
+				"invalidSequenceDigits": "Sequence digits must be a whole number",
+				"sequenceDigitsMin": "Sequence digits must be at least 1",
+				"sequenceDigitsMax": "Sequence digits cannot exceed 10"
+			},
+			"fields": {
+				"prefix": "Prefix",
+				"separator": "Separator",
+				"dateFormat": "Date format",
+				"timezone": "Timezone",
+				"startSequence": "Start sequence",
+				"sequenceDigits": "Sequence digits",
+				"paymentDueDays": "Payment due (days after issue)",
+				"finalizationDelay": "Finalization delay"
+			},
+			"hints": {
+				"prefix": "Non-empty string. E.g. INV, ACME, FP",
+				"separator": "Character between prefix, date, and sequence. Leave empty for no separator.",
+				"timezone": "IANA timezone name recommended (e.g. Asia/Kolkata)",
+				"dateFormat": "One of YYYYMM, YYYY, YYYYMMDD, YYMMDD, or YY. Used in the invoice number date segment.",
+				"startSequence": "Integer ≥ 0. Starting number for the sequence.",
+				"sequenceDigits": "1–10 digits, zero-padded. E.g. 5 → 00001",
+				"paymentDueDays": "Integer ≥ 0. Days after invoice creation to set due date. Default: 1.",
+				"finalizationDelay": "How long a computed draft invoice waits before it is automatically finalized. 0 finalizes immediately. Default: 2 hours."
+			},
+			"delayUnits": {
+				"seconds": "Seconds",
+				"minutes": "Minutes",
+				"hours": "Hours",
+				"days": "Days"
+			},
+			"dateFormats": {
+				"YYYYMM": "YYYYMM — 202506",
+				"YYYY": "YYYY — 2025",
+				"YYYYMMDD": "YYYYMMDD — 20250629",
+				"YYMMDD": "YYMMDD — 250629",
+				"YY": "YY — 25"
+			}
+		},
+		"subscriptionConfiguration": {
+			"actions": {
+				"docs": "Docs",
+				"docsTitle": "Open subscription configuration docs"
+			},
+			"title": "Subscription configuration",
+			"previewLabel": "Configuration preview",
+			"saveSuccess": "Subscription configuration saved",
+			"saveError": "Failed to save subscription configuration",
+			"preview": {
+				"triggerColumn": "Trigger",
+				"gracePeriodColumn": "Grace period",
+				"actionColumn": "Action",
+				"triggerValue": "Invoice unpaid past due date",
+				"gracePeriodValue": "{{count}} days",
+				"actionEnabled": "Cancel subscription",
+				"actionDisabled": "Not enabled"
+			},
+			"fields": {
+				"autoCancellation": "Enable auto-cancellation",
+				"gracePeriodDays": "Grace period",
+				"gracePeriodSuffix": "days after due date"
+			},
+			"hints": {
+				"autoCancellation": "Cancel overdue subscriptions automatically",
+				"disabledState": "When enabled, subscriptions are cancelled automatically after the grace period.",
+				"gracePeriodDays": "Minimum 1 day. Default is 3."
+			},
+			"infoCallout": {
+				"title": "What happens when this triggers",
+				"description1": "Subscription is cancelled immediately - not at period end",
+				"description2": "A subscription.cancelled webhook fires so downstream systems stay in sync",
+				"description3": "Future credit grants are cancelled, a final invoice is generated for the partial period"
+			}
+		},
+		"taxConfiguration": {
+			"title": "Tax configuration",
+			"description": "Use an external tax engine to calculate tax on invoices and credit notes instead of your Flexprice tax rates.",
+			"fields": {
+				"enabled": "Use an external tax engine",
+				"provider": "Tax engine"
+			},
+			"hints": {
+				"enabled": "When off, Flexprice calculates tax from the tax rates you have configured.",
+				"provider": "Which engine calculates tax. Stripe is the only external engine currently supported."
+			},
+			"providers": {
+				"flexprice": "Flexprice (native)",
+				"stripe": "Stripe Tax"
+			},
+			"warnings": {
+				"overridesNativeRates": "While an external engine is in force, your Flexprice tax rates are no longer applied, and linking new tax rates or using overrides is rejected. Credit notes keep the tax treatment of the invoice they were raised against.",
+				"missingConnection": "No Stripe connection was found in this environment. Without one, tax calculation fails — it does not fall back to your Flexprice tax rates. Add the connection before enabling this.",
+				"nativeSelected": "Flexprice is the native engine, so selecting it here changes nothing. Turn this off instead, or choose an external engine."
+			},
+			"actions": {
+				"docs": "Docs",
+				"docsTitle": "Open the tax configuration documentation",
+				"superAdminOnly": "Only a Super Admin can change this setting."
+			},
+			"saveSuccess": "Tax configuration saved.",
+			"saveError": "Could not save the tax configuration."
+		},
+		"customCurrencyConfiguration": {
+			"title": "Custom currency configuration",
+			"saveSuccess": "Custom currency configuration saved",
+			"saveError": "Failed to save custom currency configuration",
+			"fields": {
+				"settlementCurrency": "Settlement currency",
+				"settlementPlaceholder": "Select a currency",
+				"conversionCurrencies": "Conversion currencies",
+				"defaultBadge": "default",
+				"code": "Code",
+				"name": "Name",
+				"symbol": "Symbol",
+				"rate": "Rate to {{fiat}}",
+				"codePlaceholder": "crd",
+				"namePlaceholder": "Credits",
+				"symbolPlaceholder": "CR",
+				"ratePlaceholder": "0.00"
+			},
+			"hints": {
+				"settlementCurrency": "Invoices are issued and paid in this currency. Amounts priced in your custom currency are converted into it.",
+				"conversionCurrencies": "Every custom currency needs a rate for each of these. Enter what one unit of your currency is worth there, not the other way round.",
+				"conversionFormula": "1 CRD = 0.10 USD, so the rate is 0.10",
+				"code": "Used wherever a currency is set on a price, subscription or wallet. It cannot be changed later."
+			},
+			"actions": {
+				"addCurrency": "Add currency",
+				"addConversionCurrency": "Add currency",
+				"docs": "Docs",
+				"docsTitle": "Open custom currency docs",
+				"removeCurrency": "Remove {{currency}}",
+				"removeConversionCurrency": "Remove {{currency}}"
+			},
+			"errors": {
+				"loadFailed": "Could not load the current configuration. Reload before making changes.",
+				"defaultFiatRequired": "Select a settlement currency.",
+				"codeLength": "Currency codes must be 3 characters.",
+				"codeDuplicate": "Each currency code can only be used once.",
+				"codeMatchesFiat": "A currency code cannot match a conversion currency.",
+				"nameRequired": "Every currency needs a name.",
+				"symbolRequired": "Every currency needs a symbol.",
+				"factorInvalid": "Every rate must be greater than 0."
+			}
+		},
+		"forexRates": {
+			"modal": {
+				"titleAdd": "Add forex rate",
+				"titleEdit": "Edit forex rate",
+				"from": "From currency",
+				"to": "To currency",
+				"pair": "Currency pair",
+				"selectCurrency": "Select currency",
+				"rate": "Rate",
+				"ratePlaceholder": "83.00",
+				"start": "Valid from",
+				"end": "Valid until",
+				"startPlaceholder": "Always",
+				"endPlaceholder": "No end",
+				"clear": "Clear",
+				"windowHint": "A blank start has no start limit and a blank end means no expiry. Windows are matched at the moment an invoice is finalized or a checkout is created.",
+				"editWindowHint": "Saved dates can be changed but not cleared. To remove a date, delete this override and add a new one.",
+				"cancel": "Cancel",
+				"save": "Save",
+				"errors": {
+					"pairRequired": "Select both currencies.",
+					"pairSame": "From and To must be different currencies.",
+					"rateRequired": "Enter a rate.",
+					"ratePositive": "Rate must be a number greater than 0.",
+					"windowOrder": "Valid from must be before Valid until.",
+					"windowOverlap": "Overlaps another override in this list."
+				}
+			},
+			"title": "Global forex rates",
+			"description": "Default exchange rates used when a customer is billed in a different currency from the plan's.",
+			"addRate": "Add rate",
+			"empty": "No forex rates yet",
+			"loadError": "Could not load forex rates.",
+			"paginationUnit": "rates",
+			"writeDeniedTooltip": "You don't have permission to manage forex rates. Ask a tenant admin for access.",
+			"columns": {
+				"rate": "Rate",
+				"updated": "Last updated"
+			},
+			"toast": {
+				"created": "Forex rate added",
+				"updated": "Forex rate updated"
+			}
+		}
+	},
+	"customerPortal": {
+		"tabs": {
+			"customerPortal": "Customer Portal"
+		},
+		"portal": {
+			"title": "Portal",
+			"description": "Control which sections and tabs are visible to customers in the self-service portal.",
+			"showInvoices": "Show invoices",
+			"showInvoicesDescription": "Customers can view and download their invoices",
+			"showWalletBalance": "Show wallet balance",
+			"showWalletBalanceDescription": "Customers can see their credit balance and transaction history",
+			"showUsage": "Show usage",
+			"showUsageDescription": "Customers can view metered usage data for their subscription",
+			"showSubscriptions": "Show subscriptions",
+			"showSubscriptionsDescription": "Customers can view their active subscription details",
+			"saveSuccess": "Portal settings saved",
+			"saveError": "Failed to save portal settings",
+			"showPaymentMethods": "Show payment methods",
+			"showPaymentMethodsDescription": "Let customers view saved cards and add a new one from the portal",
+			"showUsageProperties": "Group and filter usage by properties",
+			"showUsagePropertiesDescription": "Customers can group and filter usage by event properties, such as region or model",
+			"allowedKeys": "Only show these properties",
+			"allowedKeysDescription": "Leave empty to show all properties.",
+			"hiddenKeys": "Always hide these properties",
+			"hiddenKeysDescription": "Properties that have quantity type values are hidden by default",
+			"addKey": "Add property",
+			"searchKeys": "Search or type a property",
+			"addTypedKey": "Add \"{{key}}\"",
+			"removeKey": "Remove {{key}}",
+			"loadingKeys": "Loading properties…",
+			"noKeysFound": "No properties found in the last 7 days",
+			"invalidKeys": "Properties can contain only letters, numbers, _ and ."
+		}
+	},
+	"customerOnboarding": {
+		"tabs": {
+			"customerOnboarding": "Customer Onboarding"
+		},
+		"workflow": {
+			"title": "Customer onboarding",
+			"description": "Configure actions that run automatically after a customer is created. With no actions configured, onboarding is skipped.",
+			"summaryLabel": "Workflow status",
+			"noActionsConfigured": "No onboarding actions are configured.",
+			"actionConfigured": "{{count}} onboarding action configured",
+			"actionsConfigured": "{{count}} onboarding actions configured",
+			"advancedActionsPreserved": "This config contains advanced actions that are not editable here. They will be preserved when you save.",
+			"selectedPlanUnavailable": "This plan is saved in the workflow but is not in the current published plan list.",
+			"saveSuccess": "Customer onboarding settings saved",
+			"saveError": "Failed to save customer onboarding settings",
+			"resetSuccess": "Customer onboarding reset to defaults",
+			"resetError": "Failed to reset customer onboarding",
+			"validation": {
+				"walletCurrencyRequired": "Wallet currency is required",
+				"walletConversionRateInvalid": "Wallet conversion rate must be greater than 0",
+				"walletInitialCreditsInvalid": "Initial credits must be a number greater than or equal to 0",
+				"walletCreditsExpirationIncomplete": "Set both expiration duration and unit when expire credits is enabled",
+				"walletCreditsExpirationInvalid": "Expiration duration must be a positive whole number with a valid unit",
+				"walletCreditsExpirationWithoutCredits": "Expiration can only be set when initial credits are greater than 0",
+				"subscriptionPlanRequired": "Select a plan before enabling subscription creation",
+				"subscriptionStartDateInvalid": "Start date must be an ISO datetime like 2026-07-04T00:00:00Z, or left blank",
+				"customWorkflowNameRequired": "Each custom workflow needs a name",
+				"customWorkflowNameInvalid": "Custom workflow names must be 100 characters or fewer",
+				"customWorkflowNameDuplicate": "Custom workflow names must be unique"
+			},
+			"customWorkflows": {
+				"title": "Custom workflows",
+				"description": "Optional named workflows which can be used to trigger different onboarding flows for different customers.",
+				"empty": "No custom workflows yet.",
+				"add": "Add custom workflow",
+				"remove": "Remove custom workflow",
+				"name": "Name",
+				"nameHint": "Used as the workflow name. Up to 100 characters.",
+				"namePlaceholder": "Enterprise trial",
+				"untitled": "Untitled workflow",
+				"noActionsSummary": "No actions enabled",
+				"advancedCount": "{{count}} advanced action(s) preserved"
+			},
+			"wallet": {
+				"title": "Create wallet",
+				"description": "Create a wallet for every new customer.",
+				"type": "Wallet type",
+				"typeHint": "Pre-paid wallets deduct from a balance; post-paid wallets settle on invoices.",
+				"typePlaceholder": "Select wallet type",
+				"types": {
+					"prePaid": "Pre-Paid",
+					"prePaidHint": "Customers top up credits in advance. Usage deducts from a real-time balance.",
+					"postPaid": "Post-Paid",
+					"postPaidHint": "Credits are applied to invoices at the end of the billing cycle."
+				},
+				"currency": "Currency",
+				"currencyHint": "Currency for the wallet that will be created.",
+				"conversionRate": "Conversion rate",
+				"conversionRateHint": "Optional. Defaults to 1 when left blank.",
+				"initialCredits": "Initial credits",
+				"initialCreditsHint": "Optional welcome free credits. Leave blank or 0 for no free credits.",
+				"initialCreditsPlaceholder": "0",
+				"expireCredits": "Expire credits",
+				"expireCreditsHint": "When off, welcome credits never expire. When on, set a relative duration and unit.",
+				"expirationDuration": "Credits expiry duration",
+				"expirationDurationHint": "How long after grant before welcome credits expire. Required with unit when expiry is enabled.",
+				"expirationDurationPlaceholder": "30",
+				"expirationUnit": "Credits expiry unit",
+				"expirationUnitHint": "Unit for the expiry duration. Required with duration when expiry is enabled.",
+				"expirationUnitPlaceholder": "Select unit",
+				"expirationUnits": {
+					"day": "Day",
+					"week": "Week",
+					"month": "Month",
+					"year": "Year"
+				}
+			},
+			"subscription": {
+				"title": "Create subscription",
+				"description": "Create a subscription for every new customer.",
+				"plan": "Plan",
+				"planPlaceholder": "Select a plan",
+				"plansLoading": "Loading plans...",
+				"noPlans": "No published plans found",
+				"planHint": "The plan to subscribe newly created customers to.",
+				"billingCycle": "Billing cycle",
+				"billingCycleHint": "Anniversary bills relative to customer signup; calendar aligns to calendar periods.",
+				"startDate": "Start date",
+				"startDatePlaceholder": "2026-07-04T00:00:00Z",
+				"startDateHint": "Optional RFC3339 timestamp. Leave blank to omit start_date."
+			}
+		}
+	},
+	"alerts": {
+		"tabs": {
+			"alerts": "Alerts"
+		},
+		"walletAlerts": {
+			"title": "Wallet Alert Settings",
+			"description": "Monitor wallet balance against configured thresholds",
+			"amountPlaceholder": "0.00",
+			"saveChanges": "Save changes",
+			"saveSuccess": "Wallet alert settings saved",
+			"saveError": "Failed to save wallet alert settings",
+			"levels": {
+				"critical": "Critical",
+				"warning": "Warning",
+				"info": "Info"
+			},
+			"validation": {
+				"atLeastOneThreshold": "Please configure at least one threshold level when alerts are enabled",
+				"invalidCriticalThreshold": "Please enter a valid critical threshold value",
+				"invalidWarningThreshold": "Please enter a valid warning threshold value",
+				"invalidInfoThreshold": "Please enter a valid info threshold value",
+				"criticalThresholdOutOfRange": "Critical threshold must be between 0 and 100.",
+				"warningThresholdOutOfRange": "Warning threshold must be between 0 and 100.",
+				"infoThresholdOutOfRange": "Info threshold must be between 0 and 100.",
+				"criticalRequiredForWarning": "A critical threshold is required when a warning threshold is set",
+				"warningMustBeGreaterThanCritical": "The warning threshold must be greater than the critical threshold",
+				"infoMustBeGreaterThanWarning": "The info threshold must be greater than the warning threshold",
+				"infoMustBeGreaterThanCritical": "The info threshold must be greater than the critical threshold"
+			},
+			"rowDescription": "Balance below",
+			"thresholdTypeLabel": "Threshold type",
+			"thresholdTypeAbsolute": "Absolute",
+			"thresholdTypePercentage": "Percentage",
+			"thresholdTypeTooltipAbsolute": "Absolute: alerts trigger when the wallet balance falls below a fixed amount.",
+			"thresholdTypeTooltipPercentage": "Percentage: alerts trigger on the ongoing balance, measured as a percentage of the credits granted during the current billing period. If there is no active subscription, lifetime credits are used."
+		}
+	},
+	"appearance": {
+		"tabs": {
+			"appearance": "Appearance"
+		},
+		"theme": {
+			"title": "Dark mode",
+			"description": "Switch the dashboard between the light and dark colour themes. The choice is saved on this device.",
+			"toggleAriaLabel": "Toggle dark mode",
+			"rolloutNote": "Dark mode is still being rolled out — some screens have not been converted yet and will keep their light styling for now."
+		}
+	},
+	"billingPage": {
+		"errorFetchBilling": "Error fetching billing details",
+		"labels": {
+			"name": "Name",
+			"billingEmail": "Billing Email",
+			"billingAddress": "Billing Address",
+			"billingCity": "Billing City",
+			"billingState": "Billing State",
+			"billingCountry": "Billing Country",
+			"billingPostalCode": "Billing Postal Code"
+		},
+		"tabs": {
+			"usage": "Usage",
+			"subscriptions": "Subscriptions",
+			"general": "General"
+		},
+		"cards": {
+			"usage": "Usage",
+			"subscriptions": "Subscriptions",
+			"billingDetails": "Billing Details"
+		}
+	},
+	"tenant": {
+		"validation": {
+			"organizationNameRequired": "Organization name is required"
+		},
+		"errors": {
+			"tenantIdRequired": "Tenant ID is required",
+			"updateFailed": "Failed to update tenant details. Please try again."
+		},
+		"toast": {
+			"updated": "Tenant details updated successfully"
+		},
+		"drawer": {
+			"title": "Update Tenant Details",
+			"description": "Update your billing address details.",
+			"organizationName": "Organization Name",
+			"organizationNamePlaceholder": "Enter your organization name",
+			"billingSection": "Billing Details",
+			"billingEmail": "Billing Email",
+			"helpEmail": "Help Email",
+			"phone": "Phone",
+			"country": "Country",
+			"selectCountry": "Select Country",
+			"noCountries": "No countries Available",
+			"addressLine1": "Address Line 1",
+			"addressLine1Placeholder": "Street address, P.O. box, company name, c/o",
+			"addressLine2": "Address Line 2",
+			"addressLine2Placeholder": "Apartment, suite, unit, building, floor, etc.",
+			"state": "State",
+			"selectState": "Select State",
+			"noStates": "No states Available",
+			"city": "City",
+			"selectCity": "Select City",
+			"noCities": "No cities Available",
+			"postalCode": "Postal Code",
+			"postalCodePlaceholder": "Enter Postal Code",
+			"saving": "Saving...",
+			"saveChanges": "Save Changes"
+		}
+	},
+	"integrationDrawer": {
+		"validation": {
+			"nameRequired": "Connection name is required",
+			"apiSecretRequired": "API secret key is required"
+		},
+		"title": {
+			"edit": "Edit {{providerName}} Connection",
+			"connect": "Connect to {{providerName}}"
+		},
+		"description": "Enter connection details. Click save when you're done.",
+		"connectionName": "Connection Name",
+		"connectionNamePlaceholder": "Enter Name",
+		"connectionNameHint": "A dummy name for this integration",
+		"apiSecretKey": "API Secret Key",
+		"apiSecretPlaceholder": "Enter API Secret Key",
+		"apiSecretHint": "Your API secret key from the provider"
+	},
+	"import": {
+		"entityTypes": {
+			"events": "Events",
+			"customers": "Customers",
+			"features": "Features",
+			"prices": "Prices"
+		},
+		"fileTypes": {
+			"csv": "Csv",
+			"json": "Json"
+		},
+		"taskTypes": {
+			"import": "Import",
+			"export": "Export"
+		},
+		"taskStatus": {
+			"successful": "Successful",
+			"failed": "Failed",
+			"queued": "Queued"
+		},
+		"detailLabels": {
+			"type": "Type",
+			"status": "Status",
+			"importStartedAt": "Import Started at",
+			"importCompletedAt": "Import Completed at"
+		},
+		"rowStats": {
+			"totalRows": "Total Rows",
+			"failedRows": "Failed Rows",
+			"successfulRows": "Successful Rows"
+		},
+		"validation": {
+			"uploadFile": "Please upload a file",
+			"selectEntityType": "Please select an entity type"
+		},
+		"toast": {
+			"uploadSuccess": "{{filename}} uploaded successfully",
+			"uploadFailed": "{{filename}} upload failed"
+		},
+		"errors": {
+			"notConfigured": "Import is not enabled for this environment. Please contact support.",
+			"invalidUploadId": "Something went wrong wiring up the uploader. Please refresh and try again.",
+			"missingTenantOrEnv": "Waiting for your tenant and environment to load…",
+			"downloadFailedHint": "We couldn't read the uploaded file. This usually happens if you clicked Import before the upload finished. Please try again."
+		},
+		"importFileLabel": "Import file",
+		"chooseFile": "Choose File to Upload",
+		"maxFileSizeHint": "Max 5 MB. Only .csv files are accepted."
+	},
+	"bulkImports": {
+		"writeDeniedTooltip": "You don't have permission to create import tasks. Ask a tenant admin for access.",
+		"title": "Bulk Imports",
+		"columns": {
+			"fileName": "File Name",
+			"entityType": "Entity Type",
+			"status": "Status",
+			"startedAt": "Started At",
+			"updatedAt": "Updated At"
+		},
+		"errors": {
+			"fetchFailed": "Failed to fetch data"
+		},
+		"empty": {
+			"readyTitle": "Ready to Import Data?",
+			"readyDescription": "Upload your first import file to bring in customer or events data.",
+			"createTaskButton": "Create Import Task"
+		},
+		"importFile": "Import File",
+		"paginationUnit": "Import Tasks",
+		"placeholders": {
+			"noFileName": "--"
+		}
+	},
+	"exportDrawer": {
+		"validation": {
+			"bucketRequired": "S3 bucket name is required",
+			"regionRequired": "AWS region is required",
+			"keyPrefixRequired": "Key prefix is required",
+			"metadataFieldKeys": "All metadata fields must have a field key"
+		},
+		"toast": {
+			"created": "Export task created successfully",
+			"updated": "Export task updated successfully",
+			"createFailed": "Failed to create export task",
+			"updateFailed": "Failed to update export task"
+		},
+		"title": {
+			"edit": "Edit Export Task",
+			"create": "Create Export Task"
+		},
+		"description": "Configure the export settings for your S3 data pipeline. Click save when you're done.",
+		"entityType": "Entity Type",
+		"entityTypeHint": "Select the type of data to export",
+		"entityTypes": {
+			"events": "Events",
+			"invoice": "Invoice",
+			"creditTopups": "Credit Topups",
+			"walletDebits": "Wallet Debits",
+			"walletLedger": "Wallet Ledger",
+			"creditUsage": "Credit Usage",
+			"usageAnalytics": "Usage Analytics"
+		},
+		"interval": {
+			"label": "Export Interval",
+			"hint": "How often to run the export",
+			"hourly": "Hourly",
+			"daily": "Daily"
+		},
+		"s3": {
+			"bucket": "S3 Bucket Name",
+			"bucketPlaceholder": "Enter S3 bucket name",
+			"bucketHint": "The name of your S3 bucket",
+			"region": "AWS Region",
+			"regionPlaceholder": "Enter AWS region",
+			"regionHint": "The AWS region where your S3 bucket is located",
+			"keyPrefix": "Key Prefix",
+			"keyPrefixPlaceholder": "Enter key prefix",
+			"keyPrefixHint": "The prefix for files in your S3 bucket"
+		},
+		"compression": {
+			"label": "Compression",
+			"hint": "Compression format for exported files",
+			"none": "None",
+			"gzip": "GZIP"
+		},
+		"encryption": {
+			"label": "Encryption",
+			"hint": "Encryption method for exported files",
+			"aes256": "AES256"
+		},
+		"metadata": {
+			"title": "Additional Metadata Fields",
+			"optional": "(Optional)",
+			"tooltip": "Export custom metadata fields as additional CSV columns. If the same field key exists on multiple entity types, use Column Name to give each a unique header.",
+			"columnName": "Column Name",
+			"summary": "{{count}} field configured",
+			"summaryPlural": "{{count}} fields configured",
+			"emptyHint": "Click to add metadata fields to export",
+			"entityTypeCol": "Entity Type",
+			"fieldKeyCol": "Field Key *",
+			"fieldKeyPlaceholder": "e.g. account_id",
+			"columnNamePlaceholder": "CSV column header, e.g. Account ID",
+			"setColumnName": "+ set column name",
+			"addField": "Add Metadata Field",
+			"entityTypes": {
+				"customer": "Customer",
+				"wallet": "Wallet"
+			}
+		},
+		"endpoint": {
+			"label": "Endpoint URL (Optional)",
+			"placeholder": "Enter custom S3 endpoint URL",
+			"description": "Custom endpoint URL for S3-compatible storage (e.g., MinIO, DigitalOcean Spaces)"
+		},
+		"flexpriceManaged": {
+			"title": "Flexprice Managed Storage",
+			"body": "Your exports will be automatically stored in Flexprice-managed S3 buckets. No additional export configuration required. Download the exported files from the respective task runs table."
+		},
+		"enabled": "Enable this export task",
+		"buttons": {
+			"create": "Create"
+		}
+	},
+	"exportRuns": {
+		"emptyTitle": "No Export Runs",
+		"emptyDescription": "This export task hasn't run yet.",
+		"recentTitle": "Recent Export Runs",
+		"notStarted": "Not started",
+		"started": "Started: {{time}}",
+		"completed": "Completed: {{time}}",
+		"errorPrefix": "Error:",
+		"processed": "processed",
+		"exported": "exported",
+		"sizeUnits": {
+			"bytes": "Bytes",
+			"kb": "KB",
+			"mb": "MB",
+			"gb": "GB"
+		},
+		"notAvailable": "N/A",
+		"runStatus": {
+			"completed": "Completed",
+			"failed": "Failed",
+			"running": "Running",
+			"pending": "Pending",
+			"cancelled": "Cancelled"
+		}
+	},
+	"connection": {
+		"awsMarketplace": {
+			"titleConnect": "Connect your AWS Marketplace account",
+			"titleEdit": "Edit AWS Marketplace Connection",
+			"description": "Sync your AWS Marketplace customers, subscriptions, and billing data securely using an IAM role. Flexprice only accesses the permissions you explicitly grant, and verifies the connection before enabling sync.",
+			"connectionNameLabel": "Connection Name",
+			"connectionNameInfo": "Choose a name to help identify this AWS Marketplace connection inside your workspace.",
+			"connectionNamePlaceholder": "Production AWS Marketplace",
+			"connectionNameHint": "A descriptive name for this connection.",
+			"step1Title": "Step 1 — Create an IAM role in AWS",
+			"step1Hint": "Create a new IAM role in your AWS account using the policies below. They grant Flexprice only the permissions required to sync your AWS Marketplace subscriptions, customers, and billing information.",
+			"iamPolicyLabel": "Permissions Policy",
+			"iamPolicyInfo": "Specifies exactly what AWS Marketplace resources Flexprice can access.",
+			"trustPolicyLabel": "Trust Relationship",
+			"trustPolicyInfo": "Allows Flexprice to securely assume this IAM role using the External ID below.",
+			"externalIdLabel": "External ID",
+			"externalIdInfo": "This unique identifier protects against the Confused Deputy security issue by ensuring only your Flexprice workspace can assume this IAM role. You don't need to copy it separately — it's already included in the Trust Relationship above.",
+			"accountIdLabel": "Flexprice AWS account ID",
+			"accountIdInfo": "Flexprice's AWS account that your IAM role will trust. It's already included in the Trust Relationship above.",
+			"accountIdMissing": "Not configured. Set VITE_FLEXPRICE_AWS_ACCOUNT_ID so the trust policy can be generated.",
+			"step2Title": "Step 2 — Enter your IAM Role ARN",
+			"roleArnLabel": "Role ARN",
+			"roleArnInfo": "Paste the full ARN of the IAM role created in your AWS account. We'll verify that it can be assumed before saving.",
+			"roleArnPlaceholder": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/flexprice-marketplace-role",
+			"roleArnHint": "We'll validate the role before saving the connection.",
+			"regionLabel": "AWS Marketplace Region",
+			"regionInfo": "The AWS region your product's Marketplace Metering Service is enabled in. Defaults to us-east-1 — AWS Marketplace assigns this to every SaaS product unless you specifically requested a different region.",
+			"regionPlaceholder": "us-east-1",
+			"regionHint": "Only change this if AWS confirmed your product uses a different metering region.",
+			"variablesTitle": "Variables",
+			"variablesHint": "Copy each value to fill the matching {VARIABLE} placeholder in the Trust Relationship above. The values stay hidden here and are only revealed once pasted.",
+			"infoAriaLabel": "More information",
+			"copyIamPolicy": "Permissions policy copied to clipboard",
+			"copyTrustPolicy": "Trust relationship copied to clipboard",
+			"copyExternalId": "External ID copied to clipboard",
+			"copyAccountId": "Account ID copied to clipboard"
+		},
+		"gcpMarketplace": {
+			"titleConnect": "Connect to GCP Marketplace",
+			"titleEdit": "Edit GCP Marketplace Connection",
+			"description": "Run the setup script in your GCP project, then paste the resulting credentials JSON here. Flexprice verifies it before saving.",
+			"connectionNameLabel": "Connection name",
+			"connectionNameInfo": "Choose a name to help identify this GCP Marketplace connection inside your workspace.",
+			"connectionNamePlaceholder": "e.g. GCP Marketplace",
+			"connectionNameHint": "A descriptive name for this connection. Covers every product listed under the same GCP project.",
+			"step1Title": "1. Run this script in your GCP project's Cloud Shell",
+			"step1Hint": "It creates a Workload Identity Federation pool, a service account, and grants it exactly the permission needed to report usage. Expand to review before copying.",
+			"scriptLabel": "Setup script",
+			"scriptInfo": "Creates a Workload Identity Federation pool, provider, and service account in your GCP project, scoped to report usage only.",
+			"copyScript": "Setup script copied to clipboard",
+			"variablesTitle": "Variables",
+			"variablesHint": "Copy each value to fill the matching {VARIABLE} placeholder in the setup script above. The values stay hidden here and are only revealed once pasted.",
+			"accountIdInfo": "Flexprice's AWS account that your Workload Identity Federation provider trusts. It's already included in the setup script above.",
+			"roleNameInfo": "The AWS role name your Workload Identity Federation provider's attribute condition checks against. It's already included in the setup script above.",
+			"copyAccountId": "Account ID copied to clipboard",
+			"copyRoleName": "Role name copied to clipboard",
+			"infoAriaLabel": "More information",
+			"accountIdMissing": "Not configured. Set VITE_FLEXPRICE_AWS_ACCOUNT_ID and VITE_FLEXPRICE_AWS_ROLE_NAME so the script can be generated.",
+			"step2Title": "2. Paste the credentials JSON the script produced",
+			"credentialsJsonLabel": "Credentials JSON",
+			"credentialsJsonInfo": "The credentials file the script produced. Flexprice uses it to authenticate into your GCP project without storing a long-lived key.",
+			"credentialsJsonPlaceholder": "{\"type\": \"external_account\", ...}",
+			"credentialsJsonHint": "The full contents of the file the script wrote (flexprice-gcp-creds.json)",
+			"credentialsJsonRequired": "Credentials JSON is required",
+			"credentialsJsonInvalid": "This doesn't look like a Workload Identity Federation credentials file — it must have \"type\": \"external_account\""
+		},
+		"azureMarketplace": {
+			"titleConnect": "Connect to Azure Marketplace",
+			"titleEdit": "Edit Azure Marketplace Connection",
+			"description": "Sync your Azure Marketplace subscriptions and usage using an Entra ID app registered in your own tenant. Flexprice verifies the credentials before saving.",
+			"connectionNameLabel": "Connection name",
+			"connectionNameInfo": "Choose a name to help identify this Azure Marketplace connection inside your workspace.",
+			"connectionNamePlaceholder": "e.g. Azure Marketplace",
+			"connectionNameHint": "A descriptive name for this connection.",
+			"infoAriaLabel": "More information",
+			"step1Title": "Step 1. Register an app in your Microsoft Entra ID tenant",
+			"step1Hint": "Create an app registration in your own Microsoft Entra ID tenant and grant it access to your SaaS Marketplace resources.",
+			"technicalConfigWarning": "Use the same Entra tenant ID and application ID that you specified in the Partner Center Technical Configuration page of each offer you want usage reported for.",
+			"step2Title": "Step 2. Enter the app credentials",
+			"tenantIdLabel": "Tenant ID",
+			"tenantIdInfo": "The directory (tenant) ID of the Microsoft Entra ID tenant where the app is registered.",
+			"tenantIdPlaceholder": "Enter tenant ID",
+			"tenantIdHint": "Found on the app registration overview page in Azure.",
+			"tenantIdRequired": "Tenant ID is required",
+			"clientIdLabel": "Client ID",
+			"clientIdInfo": "The application (client) ID of the registered app.",
+			"clientIdPlaceholder": "Enter client ID",
+			"clientIdHint": "Found on the app registration overview page in Azure.",
+			"clientIdRequired": "Client ID is required",
+			"clientSecretLabel": "Client secret",
+			"clientSecretInfo": "A client secret generated for the app. Flexprice encrypts it and uses it only to request an access token.",
+			"clientSecretPlaceholder": "Enter client secret",
+			"clientSecretHint": "Generated under Certificates and secrets on the app registration.",
+			"clientSecretRequired": "Client secret is required"
+		},
+		"validation": {
+			"nameRequired": "Connection name is required",
+			"roleArnRequired": "Role ARN is required",
+			"roleArnInvalid": "Enter a valid IAM role ARN (arn:aws:iam::<account-id>:role/<name>)",
+			"regionRequired": "Region is required",
+			"awsAccessKeyRequired": "AWS Access Key ID is required",
+			"awsSecretRequired": "AWS Secret Access Key is required",
+			"accessTokenRequired": "Access token is required",
+			"clientSecretRequired": "Client secret is required",
+			"apiKeyRequired": "API key is required",
+			"apiKeyRequiredUpper": "API Key is required",
+			"siteRequired": "Site is required",
+			"webhookUsernameRequired": "Webhook username is required",
+			"webhookPasswordRequired": "Webhook password is required",
+			"secretKeyRequired": "Secret key is required",
+			"webhookSecretRequired": "Webhook secret is required",
+			"paymentGatewayRequired": "Select at least one payment gateway",
+			"keyIdRequired": "Key ID is required",
+			"clientSideTokenRequired": "Client-side token is required",
+			"organizationIdRequired": "Organization ID is required",
+			"accountsServerRequired": "Accounts server is required",
+			"clientIdRequired": "Client ID is required",
+			"redirectUrlInvalid": "Must be a valid URL starting with http:// or https://"
+		},
+		"toast": {
+			"created": "{{provider}} connection created successfully",
+			"updated": "{{provider}} connection updated successfully",
+			"failedToCreate": "Failed to create connection",
+			"failedToUpdate": "Failed to update connection",
+			"externalIdUnavailable": "Unable to create connection — tenant or environment is missing",
+			"webhookUrlCopied": "Webhook URL copied to clipboard!",
+			"redirectUriCopied": "Redirect URI copied to clipboard!",
+			"failedOAuth": "Failed to initiate OAuth",
+			"failedZohoOAuth": "Failed to initiate Zoho OAuth",
+			"oauthGeneric": "Failed to initiate OAuth"
+		},
+		"buttons": {
+			"createConnection": "Create Connection",
+			"updateConnection": "Update Connection",
+			"cancel": "Cancel"
+		},
+		"sync": {
+			"title": "Sync Configuration",
+			"description": "Configure what data to sync between {{partner}} and Flexprice",
+			"pushTo": "Push to {{partner}}",
+			"pushToHubSpot": "Push to HubSpot",
+			"inboundWebhook": "Inbound sync (webhook configuration required)"
+		},
+		"labels": {
+			"invoices": "Invoices",
+			"deals": "Deals",
+			"quotes": "Quotes",
+			"payments": "Payments",
+			"environment": "Environment",
+			"apiKey": "API Key",
+			"secretKey": "Secret Key"
+		},
+		"webhook": {
+			"sectionTitle": "Webhook Configuration",
+			"url": "Webhook URL",
+			"eventsToSubscribe": "Webhook Events to Subscribe",
+			"setupInstructions": "Setup Instructions:",
+			"copy": "Copy",
+			"copied": "Copied!",
+			"secretLabel": "Webhook Secret",
+			"secretPlaceholder": "Enter webhook secret",
+			"secretDescription": "The webhook secret for verifying webhook authenticity"
+		},
+		"scopes": {
+			"requiredScopes": "Required Scopes",
+			"hubspotHint": "Based on your sync configuration, ensure these scopes are enabled in your HubSpot app:"
+		},
+		"hubSpot": {
+			"description": "Configure your HubSpot integration with the required credentials.",
+			"connectionNamePlaceholder": "e.g., Production HubSpot, Test HubSpot",
+			"connectionNameHint": "A friendly name to identify this HubSpot connection",
+			"accessToken": "Access Token",
+			"accessTokenPlaceholder": "pat-...",
+			"accessTokenHint": "Your HubSpot private app access token",
+			"clientSecret": "Client Secret",
+			"clientSecretPlaceholder": "Enter your client secret",
+			"clientSecretHint": "Your HubSpot app client secret",
+			"webhookIntro": "Set up this webhook URL in your HubSpot legacy app dashboard to receive event notifications:",
+			"webhookEventsIntro": "Subscribe to these events in your HubSpot webhook configuration:"
+		},
+		"s3": {
+			"titleEdit": "Edit S3 Connection",
+			"titleConnect": "Connect to Amazon S3",
+			"description": "Enter your AWS credentials to connect to S3. Click save when you're done.",
+			"connectionNameHint": "A descriptive name for this S3 connection",
+			"connectionNamePlaceholder": "Enter connection name",
+			"flexpriceManaged": "Flexprice Managed Storage",
+			"flexpriceManagedHint": "No AWS configuration required",
+			"awsAccessKey": "AWS Access Key ID",
+			"awsAccessKeyPlaceholder": "Enter AWS Access Key ID",
+			"awsAccessKeyHint": "Your AWS Access Key ID",
+			"awsSecretKey": "AWS Secret Access Key",
+			"awsSecretKeyPlaceholder": "Enter AWS Secret Access Key",
+			"awsSecretKeyHint": "Your AWS Secret Access Key",
+			"sessionToken": "AWS Session Token (Optional)",
+			"sessionTokenPlaceholder": "Enter AWS Session Token",
+			"sessionTokenHint": "Required only for temporary credentials",
+			"securityNote": "Security Note",
+			"securityFlexprice": "Your data will be stored securely in Flexprice-managed S3 buckets. Files are encrypted at rest and accessible via secure download links.",
+			"securityAws": "Your AWS credentials are encrypted and stored securely. We recommend using IAM roles with minimal required permissions for S3 access."
+		},
+		"zohoBooks": {
+			"description": "Configure your Zoho Books integration and authorize via OAuth.",
+			"connectionPlaceholder": "e.g., Zoho Books Production",
+			"clientIdPlaceholder": "Zoho OAuth Client ID",
+			"clientSecretPlaceholder": "Zoho OAuth Client Secret",
+			"organizationId": "Organization ID",
+			"organizationIdPlaceholder": "Zoho Books organization_id",
+			"organizationIdHint": "Required for Zoho Books API operations.",
+			"accountsServer": "Accounts Server",
+			"accountsServerPlaceholder": "https://accounts.zoho.in",
+			"accountsServerHint": "Default is India (.in). Use another region if needed (e.g. accounts.zoho.com, accounts.zoho.eu).",
+			"webhookSection": "Webhook configuration",
+			"webhookBody": "In Zoho Books, create Invoice and Contact webhooks and set this URL on each. Use the same secret here and in Zoho so Flexprice can verify X-Zoho-Webhook-Signature.",
+			"webhookSecret": "Webhook secret",
+			"webhookSecretPlaceholderEdit": "Leave blank to keep existing secret, or enter a new secret to rotate",
+			"webhookSecretPlaceholderCreate": "Same value as in Zoho Books webhook settings",
+			"webhookSecretDescEdit": "Stored encrypted. Leave blank to keep the current secret when updating.",
+			"webhookSecretDescCreate": "Required. Must match the secret in Zoho Books so Flexprice can verify X-Zoho-Webhook-Signature. Stored encrypted with your connection.",
+			"oauthRedirectTitle": "OAuth Redirect URI",
+			"oauthRedirectBody": "This URI must exactly match your Zoho app Authorized Redirect URI and backend oauth redirect configuration.",
+			"webhookBodyHtml": "In Zoho Books, create Invoice and Contact webhooks and set this URL on each. Use the same secret here and in Zoho so Flexprice can verify <header>X-Zoho-Webhook-Signature</header>.",
+			"credentialsHidden": "OAuth credentials are encrypted and hidden. To update credentials, delete the connection and create a new one.",
+			"selectTenantForUrl": "Select tenant and environment to generate URL",
+			"toastUpdated": "Zoho Books connection updated successfully",
+			"attachPaymentGateways": "Attach payment gateways to invoices",
+			"attachPaymentGatewaysDesc": "Adds pay online links to synced invoices.",
+			"paymentGateways": "Payment gateways",
+			"paymentGatewaysDesc": "Select the gateways to show on synced invoices. Each must be set up under Online Payments in Zoho Books.",
+			"paypalPaymentMethod": "PayPal payment method",
+			"paypalPaymentMethodDesc": "How customers pay through PayPal on synced invoices.",
+			"paypalPaymentMethodStandard": "Standard",
+			"paypalPaymentMethodAdaptive": "Adaptive"
+		},
+		"quickBooks": {
+			"descriptionEdit": "Update your QuickBooks connection settings.",
+			"descriptionCreate": "Configure your QuickBooks integration. You will be redirected to QuickBooks to authorize the connection.",
+			"connectionNamePlaceholder": "e.g., QuickBooks Production, QuickBooks Sandbox",
+			"connectionNameHint": "A friendly name to identify this QuickBooks connection",
+			"clientId": "Client ID",
+			"clientIdPlaceholder": "Enter your QuickBooks OAuth Client ID",
+			"clientIdHint": "Your QuickBooks OAuth Client ID from the Developer Dashboard (Keys & Credentials tab)",
+			"qbClientSecret": "Client Secret",
+			"qbClientSecretPlaceholder": "Enter your QuickBooks OAuth Client Secret",
+			"qbClientSecretHint": "Your QuickBooks OAuth Client Secret from the Developer Dashboard (Keys & Credentials tab)",
+			"incomeAccountOptional": "Income Account ID (Optional)",
+			"incomeAccountPlaceholder": "79",
+			"incomeAccountHint": "QuickBooks Income Account ID for Items. If left blank, it defaults to QuickBooks' standard income account (ID: 79).",
+			"pushToQb": "Push to QuickBooks",
+			"webhookPaymentEnabled": "Configure webhooks in your QuickBooks app to enable payment reconciliation from QuickBooks to Flexprice.",
+			"webhookPaymentDisabled": "Enable payment sync to configure webhook integration for payment reconciliation.",
+			"webhookVerifierOptional": "Webhook Verifier Token (Optional)",
+			"webhookVerifierPlaceholder": "Enter webhook verifier token from QuickBooks",
+			"webhookVerifierHint": "The webhook verifier token from Intuit Developer Portal for signature verification (recommended for production)",
+			"qbWebhookIntro": "Set up this webhook URL in your QuickBooks app (Intuit Developer Portal) to receive payment notifications:",
+			"qbWebhookEventsIntro": "Subscribe to this event in your QuickBooks app (Intuit Developer Portal):",
+			"oauthTitle": "🔒 OAuth Authorization Required",
+			"oauthBody": "After clicking Create Connection, you will be redirected to QuickBooks to authorize this connection.",
+			"oauthClientReady": "Make sure you have the Client ID and Client Secret ready from your QuickBooks Dashboard.",
+			"oauthImportant": "IMPORTANT: You must configure this redirect URI in your QuickBooks' app settings.",
+			"oauthImportantRich": "<important>IMPORTANT:</important> You must configure this redirect URI in your QuickBooks app settings.",
+			"noteEditing": "Note: OAuth credentials are encrypted and not displayed for security. To update credentials, delete this connection and create a new one.",
+			"qbSetupStep1": "Go to your QuickBooks app in Intuit Developer Portal",
+			"qbSetupStep2": "Navigate to Webhooks section",
+			"qbSetupStep3": "Add the webhook URL above",
+			"qbSetupStep4": "Subscribe to Payment entity events (Create/Update)",
+			"qbSetupStep5Optional": "Copy the webhook verifier token and paste it above (optional but recommended)"
+		},
+		"chargebee": {
+			"description": "Configure your Chargebee integration with the required credentials.",
+			"connectionNamePlaceholder": "e.g., Production Chargebee, Test Chargebee",
+			"connectionNameHint": "A friendly name to identify this Chargebee connection",
+			"apiKeyHint": "Your Chargebee API key from the API keys section",
+			"site": "Site",
+			"sitePlaceholder": "e.g., flexpriceio-test",
+			"siteHint": "Your Chargebee site name",
+			"webhookUsername": "Webhook Username",
+			"webhookUsernamePlaceholder": "Enter webhook username",
+			"webhookUsernameHint": "The webhook username for authenticating webhook requests",
+			"webhookPassword": "Webhook Password",
+			"webhookPasswordPlaceholder": "Enter webhook password",
+			"webhookPasswordHint": "The webhook password for authenticating webhook requests",
+			"pushToChargebee": "Push to Chargebee",
+			"webhookIntro": "Set up this webhook URL in your Chargebee dashboard to receive event notifications:",
+			"webhookEventsIntro": "Subscribe to these events in your Chargebee dashboard:"
+		},
+		"nomod": {
+			"description": "Configure your Nomod integration for payment links and invoice sync.",
+			"apiKey": "API Key",
+			"connectionPlaceholder": "e.g., Nomod Production, Nomod Test",
+			"connectionHint": "A friendly name to identify this Nomod connection",
+			"webhookSecret": "Webhook Secret",
+			"webhookSecretPlaceholder": "Enter webhook secret",
+			"apiKeyPlaceholder": "Enter your API key",
+			"apiKeyHint": "Your Nomod API key (e.g., sk_live_...)",
+			"pushToNomod": "Push to Nomod",
+			"webhookIntro": "Use this webhook URL in your Zapier webhook if needed:",
+			"webhookSecretHint": "The webhook secret for verifying webhook authenticity"
+		},
+		"moyasar": {
+			"description": "Configure your Moyasar integration with the required credentials.",
+			"connectionPlaceholder": "e.g., Moyasar Production, Moyasar Test",
+			"connectionHint": "A friendly name to identify this Moyasar connection",
+			"secretKey": "Secret Key",
+			"secretKeyPlaceholder": "sk_...",
+			"secretKeyHint": "Your Moyasar secret key from the API keys section",
+			"publishableKey": "Publishable Key",
+			"publishableKeyPlaceholder": "pk_live_... or pk_test_...",
+			"publishableKeyHint": "Used to render the secure card form for autopay. Find it in your Moyasar dashboard.",
+			"successUrl": "Success URL",
+			"successUrlPlaceholder": "https://your-app.com/billing/success",
+			"successUrlHint": "URL customers are redirected to after a successful payment (optional)",
+			"cancelUrl": "Cancel URL",
+			"cancelUrlPlaceholder": "https://your-app.com/billing/cancel",
+			"cancelUrlHint": "URL customers are redirected to if they cancel the payment (optional)",
+			"webhookIntro": "Set up this webhook URL in your Moyasar dashboard to receive event notifications:",
+			"webhookEventsIntro": "Subscribe to these events in your Moyasar dashboard:",
+			"webhookEventPaymentPaid": "payment_paid",
+			"webhookEventPaymentFailed": "payment_failed",
+			"webhookEventPaymentRefunded": "payment_refunded",
+			"webhookEventPaymentVoided": "payment_voided",
+			"webhookEventPaymentCaptured": "payment_captured"
+		},
+		"razorpay": {
+			"description": "Configure your Razorpay integration with the required credentials.",
+			"connectionPlaceholder": "e.g., Production Razorpay, Test Razorpay",
+			"connectionHint": "A friendly name to identify this Razorpay connection",
+			"keyId": "Key ID",
+			"keyIdHint": "Your Razorpay Key ID from the API keys section",
+			"secretKeyPlaceholder": "Enter your secret key",
+			"secretKeyHint": "Your Razorpay secret key from the API keys section",
+			"pushToRazorpay": "Push to Razorpay",
+			"webhookIntro": "Set up this webhook URL in your Razorpay dashboard to receive event notifications:",
+			"webhookEventsIntro": "Subscribe to these events in your Razorpay dashboard:"
+		},
+		"paddle": {
+			"description": "Configure your Paddle integration with the required credentials.",
+			"connectionPlaceholder": "e.g., Paddle Production, Paddle Sandbox",
+			"connectionHint": "A friendly name to identify this Paddle connection",
+			"apiKeyPlaceholder": "Enter your Paddle API key",
+			"apiKeyHint": "Your Paddle API key from Developer Tools > Authentication",
+			"clientSideToken": "Client-Side Token",
+			"clientSidePlaceholder": "live_... or test_...",
+			"clientSideHint": "Paddle client-side token from Developer Tools > Authentication. Used to initialize Paddle.js on the checkout page.",
+			"redirectUrl": "Redirect URL",
+			"redirectUrlPlaceholder": "https://your-app.com/payment-success",
+			"redirectUrlHint": "URL customers are redirected to after a successful payment (optional)",
+			"webhookSecretPlaceholder": "pdl_ntfset_...",
+			"webhookIntro": "Set up this webhook URL in your Paddle dashboard to receive event notifications:",
+			"webhookEventsIntro": "Subscribe to these events in your Paddle dashboard:"
+		},
+		"whop": {
+			"description": "Connect Flexprice to Whop to sync invoices.",
+			"connectionPlaceholder": "Name your Whop connection",
+			"connectionHint": "A friendly name for this connection.",
+			"apiKeyPlaceholder": "apik_...",
+			"apiKeyHint": "Bearer token from your Whop developer dashboard.",
+			"companyId": "Company ID",
+			"companyIdPlaceholder": "biz_...",
+			"companyIdHint": "Your Whop company identifier (biz_...).",
+			"companyIdRequired": "Company ID is required",
+			"productIdOptional": "Product ID (optional)",
+			"productIdPlaceholder": "prod_... — leave blank to auto-create",
+			"productIdHint": "Whop product used for invoices. Leave blank to have Flexprice create one automatically.",
+			"invoiceSyncHint": "Push Flexprice invoices to Whop as send_invoice payments",
+			"webhookSecret": "Webhook Secret",
+			"webhookSecretPlaceholderCreate": "Webhook signing secret from Whop",
+			"webhookSecretPlaceholderEdit": "Leave blank to keep existing secret, or enter a new secret to rotate",
+			"webhookSecretDescCreate": "Required for webhook verification. Must match the secret configured in Whop. Stored encrypted.",
+			"webhookSecretDescEdit": "Stored encrypted. Leave blank to keep the current secret when updating."
+		},
+		"tabs": {
+			"description": "Configure your Tabs integration with the required credentials.",
+			"connectionPlaceholder": "e.g., Tabs Production, Tabs Test",
+			"connectionHint": "A friendly name to identify this Tabs connection",
+			"apiKeyPlaceholder": "Enter your Tabs API key",
+			"apiKeyHint": "Your Tabs API key (e.g., tabs_sk_...)",
+			"pushToTabs": "Push to Tabs"
+		}
+	},
+	"insightsTools": {
+		"exports": {
+			"pageHeading": "Data Exports",
+			"s3PageHeading": "S3 Data Exports",
+			"exportNotFound": "Export Not Found",
+			"exportNotFoundDescription": "The requested export task could not be found or has been deleted.",
+			"backToExports": "Back to Exports",
+			"backToS3Connections": "Back to S3 Connections",
+			"pause": "Pause",
+			"resume": "Resume",
+			"manualExport": "Manual Export",
+			"overviewTab": "Overview",
+			"runsTab": "Runs",
+			"basicInformation": "Basic Information",
+			"statusLabel": "Status",
+			"intervalLabel": "Interval",
+			"connectionLabel": "Connection",
+			"s3Configuration": "S3 Configuration",
+			"bucketLabel": "Bucket",
+			"regionLabel": "Region",
+			"keyPrefixLabel": "Key Prefix",
+			"compressionLabel": "Compression",
+			"encryptionLabel": "Encryption",
+			"fallbackEncryptionDisplay": "AES256",
+			"timestamps": "Timestamps",
+			"createdAt": "Created At",
+			"lastUpdated": "Last Updated",
+			"exportTasksTitle": "Export Tasks",
+			"entityExportSuffix": "{{entity}} Export",
+			"exportDetailsDocumentTitle": "Export Details - {{entity}} Export",
+			"exportManagementDocumentTitle": "Export Management - {{name}}",
+			"fallbackS3ConnectionName": "S3 Connection",
+			"noExportTasks": "No Export Tasks",
+			"noExportTasksHint": "Create your first export task to start syncing data to S3.",
+			"addExportTask": "Add Export Task",
+			"connectionsTitle": "Connections",
+			"providerS3Suffix": "S3",
+			"exportCountSingular": "{{count}} export",
+			"exportCountPlural": "{{count}} exports",
+			"viewExports": "View Exports",
+			"noS3Connections": "No S3 Connections",
+			"noS3ConnectionsHint": "Create your first S3 connection to start exporting data.",
+			"addS3Connection": "Add S3 Connection",
+			"s3FeaturesTitle": "S3 Export Features",
+			"s3FeatureDataExportTitle": "Data Export",
+			"s3FeatureDataExportBody": "Automatically export events, invoices, and other Flexprice data to your S3 bucket on a scheduled basis.",
+			"s3FeatureSchedulingTitle": "Flexible Scheduling",
+			"s3FeatureSchedulingBody": "Choose between hourly or daily export schedules to match your data processing needs.",
+			"s3FeatureSecureTitle": "Secure Storage",
+			"s3FeatureSecureBody": "Your data is encrypted and securely stored in your own S3 bucket with configurable encryption options.",
+			"s3FeatureFormatsTitle": "Data Format Options",
+			"s3FeatureFormatsBody": "Export data in various formats with configurable compression and file size limits for optimal storage efficiency.",
+			"overviewSectionTitle": "Overview",
+			"overviewIntro": "Export your Flexprice data to external storage systems for data warehousing, analytics, and backup purposes. Configure automated exports with flexible scheduling and secure data transfer.",
+			"highlightAutomatedExportsTitle": "Automated Exports",
+			"highlightAutomatedExportsBody": "Schedule regular data exports",
+			"highlightMultipleFormatsTitle": "Multiple Formats",
+			"highlightMultipleFormatsBody": "Export in various data formats",
+			"highlightSecureStorageTitle": "Secure Storage",
+			"highlightSecureStorageBody": "Encrypted data transfer and storage",
+			"exportProvidersTitle": "Export Providers",
+			"providerAmazonS3Name": "Amazon S3",
+			"providerAmazonS3Description": "Export your Flexprice data to Amazon S3 for data warehousing, analytics, and backup purposes.",
+			"tagStorage": "Storage",
+			"tagDataWarehouse": "Data Warehouse",
+			"tagAnalytics": "Analytics",
+			"premiumBadge": "Premium",
+			"taskRunsHeading": "Task Runs",
+			"backToExportDetails": "Back to Export Details"
+		},
+		"usageSyncs": {
+			"pageHeading": "Usage Syncs",
+			"paginationUnit": "usage records",
+			"notSynced": "No syncs yet",
+			"entityName": "Usage Record",
+			"emptyDescription": "No usage records yet. Connect a cloud marketplace and link a subscription to start seeing usage syncs.",
+			"errors": {
+				"fetchFailed": "Failed to load usage records"
+			},
+			"columns": {
+				"subscription": "Subscription",
+				"customer": "Customer",
+				"plan": "Plan",
+				"amount": "Amount",
+				"currency": "Currency",
+				"periodStart": "Period Start",
+				"periodEnd": "Period End",
+				"syncs": "Syncs"
+			},
+			"filterLabels": {
+				"customerId": "Customer ID",
+				"subscriptionId": "Subscription ID",
+				"periodStart": "Period Start",
+				"periodEnd": "Period End"
+			},
+			"sortLabels": {
+				"createdAt": "Created At",
+				"periodStart": "Period Start",
+				"periodEnd": "Period End"
+			},
+			"drawer": {
+				"title": "Syncs",
+				"empty": "No syncs yet.",
+				"synced": "Synced",
+				"skipped": "Skipped"
+			}
+		},
+		"integrations": {
+			"writeDeniedTooltip": "You don't have permission to manage connections. Ask a tenant admin for access.",
+			"pageHeading": "Integrations",
+			"availableSection": "Available",
+			"premiumAddonsSection": "Premium add-ons",
+			"previewConnectionName": "Preview connection",
+			"badgeConnected": "Connected",
+			"badgePremium": "Premium",
+			"docsLink": "Docs",
+			"openDocsTitle": "Open {{name}} docs",
+			"disconnectTitle": "Disconnect {{name}}?",
+			"disconnectDescription": "This will remove the connection. You can reconnect from the integrations page at any time.",
+			"disconnect": "Disconnect",
+			"disconnecting": "Disconnecting…",
+			"notFound": "Integration not found",
+			"comingSoon": "Coming Soon",
+			"addConnection": "Add a connection",
+			"connectedAccountsTitle": "Connected Accounts",
+			"deleteConnectionConfirmTitle": "Are you sure you want to delete the connection \"{{name}}\"?",
+			"deleteConnectionIrreversible": "This action cannot be undone.",
+			"deleteConnection": "Delete Connection",
+			"toastDisconnected": "{{name}} disconnected",
+			"toastDisconnectFailed": "Failed to disconnect",
+			"toastPreviewDisconnectMock": "Preview only — this is a mock connected state.",
+			"toastConnectionDeleted": "Connection deleted successfully",
+			"toastConnectionDeleteFailed": "Failed to delete connection",
+			"catalog": {
+				"tags": {
+					"payments": "Payments",
+					"invoices": "Invoices",
+					"crm": "CRM",
+					"sales": "Sales",
+					"marketing": "Marketing",
+					"customerService": "Customer Service",
+					"accounting": "Accounting",
+					"payment": "Payment",
+					"invoiceCustomer": "Invoice Customer",
+					"marketplace": "Marketplace",
+					"usageMetering": "Usage Metering"
+				},
+				"mode": {
+					"test": "Test Mode"
+				},
+				"stripe": {
+					"name": "Stripe",
+					"description": "Send invoices, calculate tax, and collect payments using our native connector to Stripe.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": ["The Flexprice Stripe app enables invoicing, tax collection, and payment via Stripe."]
+						},
+						"stripeInvoicing": {
+							"title": "Stripe Invoicing",
+							"paragraphs": [
+								"Create and send invoices through Stripe Invoicing directly from Flexprice and automatically collect payments."
+							]
+						},
+						"automaticTax": {
+							"title": "Automatic Tax Calculations",
+							"paragraphs": [
+								"Leverage Stripe Tax to handle complex tax rules and rates for any region. The integration ensures accurate, up-to-date tax calculations for each invoice, removing the guesswork and reducing compliance risks."
+							]
+						},
+						"securePayments": {
+							"title": "Secure and Flexible Payments",
+							"paragraphs": [
+								"Collect payments quickly and securely via Stripe's trusted payment gateway. Your customers can choose from various payment methods - credit card, ACH, and more - to improve the overall customer experience and speed up cash flow."
+							]
+						}
+					}
+				},
+				"razorpay": {
+					"name": "Razorpay",
+					"description": "Accept, process and disburse payments using our native connector to Razorpay.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"The Flexprice Razorpay app enables invoicing, tax calculations, and payment collection directly through Razorpay. Integrate it seamlessly with Flexprice (or your billing engine) to streamline your payment workflows."
+							]
+						},
+						"razorpayInvoicing": {
+							"title": "Razorpay Invoicing",
+							"paragraphs": [
+								"Create and send invoices with a few clicks - right from Flexprice - using Razorpay's invoicing capabilities. Payment collection can be automated, reducing manual follow-ups."
+							]
+						},
+						"automaticTax": {
+							"title": "Automatic Tax Calculations",
+							"paragraphs": [
+								"Leverage Razorpay's support for regional tax rules (e.g., GST in India). This integration ensures accurate, up-to-date tax rates for each invoice, minimizing compliance risks and manual calculations."
+							]
+						},
+						"securePayments": {
+							"title": "Secure and Flexible Payments",
+							"paragraphs": [
+								"Collect payments quickly and securely via Razorpay's trusted payment gateway. Your customers can choose from various methods - credit cards, debit cards, net banking, UPI, and wallets - enhancing the payment experience and accelerating cash flow."
+							]
+						}
+					}
+				},
+				"chargebee": {
+					"name": "Chargebee",
+					"description": "Sync invoices and charges/prices between Flexprice and Chargebee for seamless billing operations.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"The Flexprice Chargebee app enables seamless synchronization of invoices and charges/prices between Flexprice and Chargebee. Integrate it to streamline your billing workflows."
+							]
+						},
+						"invoiceSync": {
+							"title": "Invoice Sync",
+							"paragraphs": [
+								"Sync invoices from Flexprice to Chargebee, ensuring your billing system stays up to date with the latest invoice data."
+							]
+						},
+						"chargePriceSync": {
+							"title": "Charge and Price Sync",
+							"paragraphs": [
+								"Synchronize charges and prices between Flexprice and Chargebee to maintain consistency across your billing platform."
+							]
+						}
+					}
+				},
+				"hubspot": {
+					"name": "Hubspot",
+					"description": "Hubspot is a CRM, sales, marketing and customer service platform.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"The Flexprice HubSpot app enables seamless syncing of deals, invoices, customers, and payments between HubSpot and Flexprice."
+							]
+						},
+						"dealLineItems": {
+							"title": "Deal Line Items Sync",
+							"paragraphs": [
+								"Automatically sync deal line items from HubSpot to Flexprice, ensuring accurate revenue tracking and billing."
+							]
+						},
+						"invoiceSync": {
+							"title": "Invoice Sync",
+							"paragraphs": ["Push invoices from Flexprice to HubSpot to keep your CRM up to date with billing information."]
+						},
+						"customerSync": {
+							"title": "Customer Sync",
+							"paragraphs": [
+								"Sync customer data between HubSpot and Flexprice to maintain a single source of truth for customer information."
+							]
+						},
+						"paymentsSync": {
+							"title": "Payments Sync",
+							"paragraphs": ["Keep payment records synchronized between both platforms for accurate financial reporting."]
+						},
+						"revenueReporting": {
+							"title": "Revenue Calculations on HubSpot",
+							"paragraphs": ["Leverage HubSpot's reporting capabilities with accurate revenue data synced from Flexprice."]
+						}
+					}
+				},
+				"salesforce": {
+					"name": "Salesforce",
+					"description": "Salesforce is a customer relationship management (CRM) platform."
+				},
+				"paypal": {
+					"name": "PayPal",
+					"description": "PayPal is an online payment system that supports online money transfers."
+				},
+				"zoho": {
+					"name": "Zoho",
+					"description": "The Zoho Books integration lets you manage critical accounting tasks directly from Flexprice.",
+					"sections": {
+						"createCustomer": {
+							"title": "Create Customer in Zoho Books",
+							"paragraphs": [
+								"Automatically create or update customers in Zoho Books whenever a new customer is added or modified in Flexprice."
+							]
+						},
+						"createInvoice": {
+							"title": "Create Invoice in Zoho Books",
+							"paragraphs": ["Generate Zoho Books invoices seamlessly from Flexprice usage data or billing triggers, reducing manual work."]
+						},
+						"transformInvoice": {
+							"title": "Transform Flexprice Invoice to Zoho Books Invoice",
+							"paragraphs": [
+								"Convert a Flexprice invoice object into Zoho Books' invoice format - streamlining data flow and ensuring accuracy."
+							]
+						}
+					}
+				},
+				"quickbooks": {
+					"name": "QuickBooks",
+					"description": "Sync plans, customers, and invoices from Flexprice to QuickBooks Online for seamless accounting operations.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"The Flexprice QuickBooks integration enables one-way sync from Flexprice to QuickBooks Online. Automatically sync plans, customers, and invoices to keep your accounting system up to date."
+							]
+						},
+						"planPriceSync": {
+							"title": "Plan/Price Sync",
+							"paragraphs": [
+								"Automatically create QuickBooks Items (Service type) when plans are created in Flexprice. Each price is mapped to a QuickBooks Item for accurate invoice line items."
+							]
+						},
+						"customerSync": {
+							"title": "Customer Sync",
+							"paragraphs": [
+								"Customers are automatically created in QuickBooks when invoices are synced. Customer data including name, email, and billing address is synchronized."
+							]
+						},
+						"invoiceSync": {
+							"title": "Invoice Sync",
+							"paragraphs": [
+								"Automatically sync invoices from Flexprice to QuickBooks Online. Invoice line items are mapped to QuickBooks Items, ensuring accurate accounting records."
+							]
+						},
+						"tokenRefresh": {
+							"title": "Automatic Token Refresh",
+							"paragraphs": [
+								"OAuth tokens are automatically refreshed by the backend when they expire, ensuring uninterrupted sync operations without manual intervention."
+							]
+						}
+					}
+				},
+				"nomod": {
+					"name": "Nomod",
+					"description": "Send invoices and collect payments using payment links through Nomod integration.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"The Flexprice Nomod app enables invoicing and payment collection through Nomod payment links. Integrate it seamlessly with Flexprice to streamline your payment workflows."
+							]
+						},
+						"invoiceSync": {
+							"title": "Invoice Sync",
+							"paragraphs": [
+								"Create and send invoices with payment links through Nomod directly from Flexprice. Payment collection can be automated through Nomod payment links."
+							]
+						},
+						"paymentLinks": {
+							"title": "Payment Links",
+							"paragraphs": [
+								"Generate secure payment links for your invoices using Nomod. Your customers can pay quickly and securely through various payment methods supported by Nomod."
+							]
+						},
+						"webhooks": {
+							"title": "Webhook Integration",
+							"paragraphs": [
+								"Receive real-time notifications about invoice and payment link events through webhooks. Stay updated on payment status, invoice creation, and more."
+							]
+						}
+					}
+				},
+				"moyasar": {
+					"name": "Moyasar",
+					"description": "Send invoices and collect payments using Moyasar payment gateway integration.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"The Flexprice Moyasar app enables invoicing and payment collection through Moyasar payment gateway. Integrate it seamlessly with Flexprice to streamline your payment workflows."
+							]
+						},
+						"invoiceSync": {
+							"title": "Invoice Sync",
+							"paragraphs": [
+								"Create and send invoices through Moyasar directly from Flexprice. Payment collection can be automated through Moyasar payment gateway."
+							]
+						},
+						"securePayments": {
+							"title": "Secure Payments",
+							"paragraphs": [
+								"Collect payments quickly and securely via Moyasar payment gateway. Your customers can choose from various payment methods to improve the overall customer experience and speed up cash flow."
+							]
+						},
+						"webhooks": {
+							"title": "Webhook Integration",
+							"paragraphs": [
+								"Receive real-time notifications about payment events through webhooks. Subscribe to payment_paid event to stay updated on payment status."
+							]
+						}
+					}
+				},
+				"paddle": {
+					"name": "Paddle",
+					"description": "Send invoices and collect payments using Paddle payment gateway integration.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"The Flexprice Paddle app enables invoicing and payment collection through Paddle payment gateway. Integrate it seamlessly with Flexprice to streamline your payment workflows."
+							]
+						},
+						"invoiceSync": {
+							"title": "Invoice Sync",
+							"paragraphs": [
+								"Create and send invoices through Paddle directly from Flexprice. Payment collection can be automated through Paddle payment gateway."
+							]
+						},
+						"securePayments": {
+							"title": "Secure Payments",
+							"paragraphs": [
+								"Collect payments quickly and securely via Paddle payment gateway. Your customers can choose from various payment methods to improve the overall customer experience and speed up cash flow."
+							]
+						},
+						"webhooksPaddle": {
+							"title": "Webhook Integration",
+							"paragraphs": [
+								"Receive real-time notifications about payment events through webhooks. Subscribe to transactions.completed event to stay updated on payment status."
+							]
+						}
+					}
+				},
+				"whop": {
+					"name": "Whop",
+					"description": "Sync invoices to Whop with automatic payment status updates.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"The Flexprice Whop integration lets you push invoices directly to Whop as one-time send_invoice payments. Customers can pay via the Whop-hosted checkout page, and Flexprice is automatically updated when payment is received."
+							]
+						},
+						"invoiceSync": {
+							"title": "Invoice Sync",
+							"paragraphs": [
+								"When invoice sync is enabled, Flexprice automatically creates a corresponding invoice in Whop whenever a Flexprice invoice is finalized. The integration ensures your Whop product exists (creating one if needed).",
+								"You can also mark a Whop invoice as paid from Flexprice, which calls the Whop mark_paid API on your behalf."
+							]
+						},
+						"webhooks": {
+							"title": "Webhooks",
+							"paragraphs": [
+								"Register the Flexprice webhook URL in your Whop developer settings, subscribe to invoice.paid, and use the same webhook signing secret in Flexprice. When Whop fires this event, Flexprice verifies the signature, marks the corresponding invoice as paid, and records the payment."
+							]
+						}
+					}
+				},
+				"tabs": {
+					"name": "Tabs",
+					"description": "Sync invoices to Tabs using your Tabs API key.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"The Flexprice Tabs integration lets you push invoices directly to Tabs using your Tabs API key. Configure a connection name, API key, and invoice sync settings to get started."
+							]
+						},
+						"invoiceSync": {
+							"title": "Invoice Sync",
+							"paragraphs": ["When invoice sync is enabled, Flexprice automatically pushes finalized invoices to Tabs."]
+						}
+					}
+				},
+				"aws_marketplace": {
+					"name": "AWS Marketplace",
+					"description": "Report metered usage to AWS Marketplace so your AWS buyers are billed for what they consume.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"Flexprice reports the usage you already meter to AWS Marketplace on your behalf. Connect the marketplace-metering IAM role from your own AWS account, and Flexprice takes care of sending BatchMeterUsage for each registered agreement."
+							]
+						},
+						"setup": {
+							"title": "Setup",
+							"paragraphs": [
+								"Create an IAM role in your AWS account using the IAM policy and trust policy shown in the connection panel. The trust policy grants Flexprice's AWS account permission to assume the role, scoped to a unique external ID. Paste the resulting Role ARN back into Flexprice and save — Flexprice verifies the role by assuming it before storing the connection."
+							]
+						},
+						"usageReporting": {
+							"title": "Usage Reporting",
+							"paragraphs": [
+								"Once connected, an hourly job aggregates usage per agreement and reports it to AWS via BatchMeterUsage, with a daily reconciliation pass as a backstop."
+							]
+						}
+					}
+				},
+				"gcp_marketplace": {
+					"name": "GCP Marketplace",
+					"description": "Report metered usage to GCP Marketplace so your GCP buyers are billed for what they consume.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"Flexprice reports the usage you already meter to GCP Marketplace on your behalf. Flexprice authenticates to your GCP project using Workload Identity Federation — no long-lived GCP key is ever stored — and sends the usage report for each registered entitlement."
+							]
+						},
+						"setup": {
+							"title": "Setup",
+							"paragraphs": [
+								"Run the setup script shown in the connection panel from your GCP project's Cloud Shell. It creates a workload identity pool trusting Flexprice's AWS identity and a service account scoped to report usage only. Paste the resulting credentials file back into Flexprice and save — Flexprice verifies the connection by exchanging it for a live token before storing it."
+							]
+						},
+						"usageReporting": {
+							"title": "Usage Reporting",
+							"paragraphs": [
+								"Once connected, a scheduled job aggregates usage per entitlement and reports it to GCP via the Service Control API's services.report."
+							]
+						}
+					}
+				},
+				"azure_marketplace": {
+					"name": "Azure Marketplace",
+					"description": "Report metered usage to Azure Marketplace so your Azure buyers are billed for what they consume.",
+					"sections": {
+						"overview": {
+							"title": "Overview",
+							"paragraphs": [
+								"Flexprice reports the usage you already meter to Azure Marketplace on your behalf. Connect an Entra ID app registered in your own Azure tenant, and Flexprice sends the usage event for each registered subscription."
+							]
+						},
+						"setup": {
+							"title": "Setup",
+							"paragraphs": [
+								"Register an app in your own Microsoft Entra ID tenant and generate a client secret for it. Make sure this app's tenant ID and application ID are entered on the Technical Configuration page of every offer you want usage reported for. Paste the tenant ID, client ID, and client secret back into Flexprice and save. Flexprice verifies the credentials by requesting an access token before storing the connection."
+							]
+						},
+						"usageReporting": {
+							"title": "Usage Reporting",
+							"paragraphs": ["Once connected, a scheduled job reports usage per subscription to Azure Marketplace's usage event API."]
+						}
+					}
+				}
+			}
+		},
+		"oauthCallback": {
+			"authorizationFailed": "❌ Authorization Failed",
+			"redirectingToIntegrations": "Redirecting back to integrations...",
+			"completingAuthorization": "Completing {{provider}} authorization...",
+			"exchangingTokens": "🔒 Securely exchanging authorization code for tokens"
+		},
+		"revenue": {
+			"pageHeading": "Revenue",
+			"metricNetRevenue": "Net Revenue",
+			"metricContractRevenue": "Contract Revenue",
+			"metricUsageRevenue": "Usage Revenue",
+			"metricVoiceMinutes": "Voice Minutes",
+			"metricCostPerMinute": "Cost / Minute",
+			"emptyRangeTitle": "This range is empty",
+			"emptyRangeBody": "Not enough revenue data is available in the selected range to show this statistics.",
+			"viewLatestData": "View latest data",
+			"searchCustomersPlaceholder": "Search customers...",
+			"colCustomer": "Customer",
+			"colCurrency": "Currency",
+			"noSearchMatches": "No customers match your search.",
+			"loadingEllipsis": "...",
+			"filterThisMonth": "This month",
+			"filterThisQuarter": "This quarter",
+			"filterThisYear": "This year",
+			"filterLastMonth": "Last month",
+			"filterLastQuarter": "Last quarter",
+			"filterLastYear": "Last year"
+		}
+	},
+	"integrations": {
+		"stripe": {
+			"description": "Configure your Stripe integration with the required credentials.",
+			"connectionPlaceholder": "e.g., Production Stripe, Test Stripe",
+			"connectionNameHint": "A friendly name to identify this Stripe connection",
+			"secretKeyLabel": "Secret Key",
+			"secretKeyPlaceholder": "sk_...",
+			"secretKeyHint": "Your Stripe secret key from the API keys section",
+			"pullFromStripe": "Pull from Stripe",
+			"pushToStripe": "Push to Stripe",
+			"customerSyncHint": "Push to Stripe. Required for Stripe Tax — tax cannot be calculated for a customer that does not exist in Stripe.",
+			"webhookSecretDescription": "The webhook secret provided by Stripe after setting up the webhook endpoint",
+			"webhookSecretPlaceholder": "whsec_...",
+			"webhookIntro": "Set up this webhook URL in your Stripe dashboard to receive event notifications:",
+			"webhookEventsIntro": "Based on your sync configuration, subscribe to these events in your Stripe dashboard:",
+			"labels": {
+				"customers": "Customers",
+				"plans": "Plans",
+				"invoices": "Invoices",
+				"prices": "Prices",
+				"subscriptions": "Subscriptions"
+			},
+			"toast": {
+				"stripeCreated": "Stripe connection created successfully",
+				"stripeUpdated": "Stripe connection updated successfully"
+			}
+		}
+	},
+	"environment": {
+		"types": {
+			"sandbox": "Sandbox",
+			"production": "Production",
+			"sandboxDescription": "For development and testing purposes",
+			"productionDescription": "For live production environment"
+		},
+		"copy": {
+			"title": "Copy Environment",
+			"fallbackDescription": "Copy all published configuration into an environment.",
+			"introBeforeBadge": "Copying from",
+			"intoNew": "into a new environment.",
+			"intoSelected": "into the selected environment.",
+			"cleanupTitle": "Clean up before copying",
+			"cleanupBodyLead": "All active features and plans will be copied as-is. Archive or remove anything you don't want carried over ",
+			"cleanupBefore": "before",
+			"cleanupBodyTrail": " proceeding.",
+			"copyIntoLabel": "Copy into",
+			"selectTargetPlaceholder": "Select target environment",
+			"createNewOption": "Create a new environment",
+			"createNewOptionDescription": "A new environment will be created for the copy",
+			"newEnvironmentName": "New Environment Name",
+			"namePlaceholder": "e.g. Staging, Production Clone",
+			"typeLabel": "Type",
+			"typePlaceholder": "Select environment type",
+			"whatCopiedHeading": "What will be copied",
+			"featuresTitle": "All active features",
+			"featuresDescription": "Static, Boolean & Metered features along with their associated meters",
+			"plansTitle": "All active plans",
+			"plansDescription": "Including all prices, entitlements, and credit grants attached to each plan",
+			"excludedLead": "Draft entities, archived entities, customers, subscriptions, invoices, and wallet balances are ",
+			"excludedBold": "not",
+			"excludedTail": " copied.",
+			"noteAsyncNewEnv": "The environment is created immediately. Features and plans are cloned in the background and may take a few seconds to appear.",
+			"noteAsyncOnly": "Features and plans are cloned in the background and may take a few seconds to appear.",
+			"copyingEllipsis": "Copying...",
+			"buttonCopy": "Copy Environment",
+			"toastStarted": "Environment clone started — features and plans are being copied in the background.",
+			"toastCloneFailed": "Failed to clone environment",
+			"errorNameRequired": "Environment name is required",
+			"errorNoSource": "No source environment selected"
+		},
+		"creator": {
+			"title": "Create Environment",
+			"description": "Create a new environment for your application",
+			"nameLabel": "Name",
+			"namePlaceholder": "Enter environment name",
+			"typeLabel": "Type",
+			"typePlaceholder": "Select environment type",
+			"sandboxCancellationNote": "Sandbox subscriptions are automatically cancelled after {{days}} days",
+			"productionBodyLine1": "Production environments require an approval.",
+			"productionContactPrompt": "Contact us to get started:",
+			"brandSlack": "Slack",
+			"brandEmail": "Email",
+			"bookACall": "Book a call",
+			"ariaSlackContact": "Contact Slack",
+			"ariaEmailContact": "Contact Email",
+			"ariaBookCall": "Book a call",
+			"slackAlt": "Slack",
+			"toastCreated": "Environment created successfully",
+			"toastCreateFailed": "Failed to create environment",
+			"errorNameRequired": "Environment name is required",
+			"errorCreateUnknown": "Failed to create environment",
+			"savingEllipsis": "Creating...",
+			"submitCreate": "Create Environment"
+		},
+		"editor": {
+			"title": "Rename Environment",
+			"description": "Update the name for this environment",
+			"nameLabel": "Name",
+			"namePlaceholder": "Enter environment name",
+			"savingEllipsis": "Saving...",
+			"submitSave": "Save",
+			"toastUpdated": "Environment updated successfully",
+			"toastUpdateFailed": "Failed to update environment",
+			"errorNameRequired": "Environment name is required",
+			"errorNoEnvironment": "No environment selected",
+			"errorUpdateUnknown": "Failed to update environment"
+		},
+		"selector": {
+			"noneAvailable": "No environments available",
+			"noEnvironment": "No environment",
+			"fallbackTenantLetters": "4P",
+			"unknownTenant": "4ThePrice Daily",
+			"addEnvironment": "Add Environment",
+			"copyEnvironment": "Copy Environment",
+			"renameAria": "Rename {{name}}",
+			"suspendedTitle": "Environment suspended",
+			"suspendedDescription": "This environment is temporarily closed. Contact us to continue.",
+			"writeDeniedTooltip": "You don't have permission to manage environments"
+		},
+		"restrictedBanner": {
+			"productionAccount": "production account",
+			"sandboxAccount": "sandbox",
+			"grace": "Your {{envType}} is active for the next {{count}} {{dayWord}}. To continue after that, ",
+			"dayWordOne": "day",
+			"dayWordPlural": "days",
+			"contactUs": "contact us",
+			"suspended": "Your {{envType}} is temporarily closed. To continue, "
+		}
+	},
+	"debug": {
+		"tooltipTitle": "Checkout usage based pricing in action",
+		"sampleEventsCreated": "Sample Events Created",
+		"loading": "Loading...",
+		"titleStreamSamples": "Stream Sample Events",
+		"noCustomers": "No customers found. Create one to get started.",
+		"needSubscriptionLead": "Assign a subscription to stream sample events to",
+		"eventsFiredSentence": "{{count}} events have been fired for ",
+		"eventsFiredMiddle": " for ",
+		"eventsFiredTrailing": " plan.",
+		"viewEvents": "View Events",
+		"streamAgain": "Stream Again",
+		"streamIntro": "Experience how metering, billing, and entitlements update in real time. Sample events will be triggered for ",
+		"planBridge": " under the ",
+		"planEnd": " plan.",
+		"progress": "{{current}} of {{total}} events fired",
+		"streaming": "Streaming...",
+		"startStreaming": "Start Streaming"
+	},
+	"saml": {
+		"tabs": {
+			"saml": "SAML SSO"
+		},
+		"config": {
+			"title": "SAML single sign-on",
+			"description": "Let your team sign in through your identity provider instead of a password.",
+			"onboardingOrder": "Copy the metadata URL below into your identity provider and create the app there first, then fill in the fields below with the values it gives you.",
+			"metadataUrlLabel": "SP metadata URL",
+			"metadataUrlDescription": "Paste this into your identity provider when creating the app.",
+			"copyMetadataUrl": "Copy metadata URL",
+			"copiedMetadataUrl": "Metadata URL copied",
+			"enabled": "Enable SAML SSO",
+			"enabledDescription": "Turn on SSO for this tenant. Requires Flexprice approval before sign-in is available.",
+			"statusApproved": "Approved",
+			"statusPending": "Pending Flexprice approval",
+			"statusDescription": "Flexprice reviews and approves SSO access for each tenant. This is separate from the toggle above.",
+			"enforceSso": "Require SSO for sign-in",
+			"enforceSsoWarning": "Turning this on disables password login for everyone in this tenant except super admins.",
+			"idpEntityId": "IdP entity ID",
+			"idpEntityIdDescription": "Must match the Issuer in the SAML assertion.",
+			"idpEntityIdPlaceholder": "https://idp.example.com/metadata",
+			"idpSsoUrl": "IdP SSO URL",
+			"idpSsoUrlDescription": "Must be an absolute https:// URL. Plain http:// is only allowed for localhost / 127.0.0.1 / ::1.",
+			"idpSsoUrlPlaceholder": "https://idp.example.com/sso",
+			"idpCertificate": "IdP certificate",
+			"idpCertificateDescription": "PEM-encoded X.509 certificate, beginning with -----BEGIN CERTIFICATE-----.",
+			"idpCertificatePlaceholder": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+			"emailAttribute": "Email attribute",
+			"emailAttributeDescription": "Assertion attribute holding the user's email. Leave blank to use the NameID.",
+			"emailAttributePlaceholder": "email",
+			"defaultRole": "Default role",
+			"defaultRoleDescription": "Role granted to users the first time they sign in through SSO.",
+			"defaultRolePlaceholder": "Select a role",
+			"roleAllReader": "All reader",
+			"roleAllWriter": "All writer",
+			"validation": {
+				"idpEntityIdRequired": "IdP entity ID is required when SAML SSO is enabled",
+				"idpSsoUrlRequired": "IdP SSO URL is required when SAML SSO is enabled",
+				"idpSsoUrlInvalid": "IdP SSO URL must be an absolute https:// URL (http:// is only allowed for localhost)",
+				"idpCertificateRequired": "IdP certificate is required when SAML SSO is enabled",
+				"defaultRoleRequired": "Default role is required when SAML SSO is enabled"
+			},
+			"saveSuccess": "SAML SSO settings saved",
+			"saveSuccessPendingApproval": "Saved. Awaiting Flexprice approval before sign-in is available.",
+			"saveError": "Failed to save SAML SSO settings",
+			"saveErrorForbidden": "SAML SSO can only be configured by a super admin user. A super admin API key cannot be used to change how people sign in.",
+			"saveErrorDisabled": "This deployment does not offer SSO.",
+			"ssoLoginUrlLabel": "SSO sign-in link",
+			"ssoLoginUrlDescription": "Share this link with your team. It takes them straight to your identity provider to sign in.",
+			"copySsoLoginUrl": "Copy SSO sign-in link",
+			"copiedSsoLoginUrl": "SSO sign-in link copied",
+			"unsupportedSigning": "Flexprice does not sign authentication requests or accept encrypted assertions. The certificate above is your identity provider's public certificate — Flexprice holds no signing key of its own. If your identity provider requires signed requests or assertion encryption, turn those options off for this application, or sign-in will fail.",
+			"saveConflict": "Someone else changed these settings while this page was open. The latest values have been loaded — review them and save again."
+		}
+	},
+	"region": {
+		"dataRegion": "Data region",
+		"selectPlaceholder": "Select a region",
+		"tooltipLearnMore": "Click to learn more about regions",
+		"dialogTitle": "Which region would you like to choose?",
+		"dialogDescription": "Please choose your region carefully. While migration to another region is possible, it requires manual intervention and cannot be changed automatically.",
+		"sectionUs": "US hosting",
+		"benefitUs1": "Faster if you and your users are based in the US",
+		"benefitUs2": "Easier to comply with some US regulations",
+		"benefitUs3": "Hosted in Oregon, USA (us-west-2)",
+		"sectionIndia": "India hosting",
+		"benefitIn1": "Faster if you and your users are based in India",
+		"benefitIn2": "Hosted in Mumbai, India (ap-south-1)"
+	}
+}

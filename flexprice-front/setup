@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+# Detect the operating system
+detect_os() {
+    case "$(uname -s)" in
+        Darwin*)
+            echo "mac"
+            ;;
+        Linux*)
+            echo "linux"
+            ;;
+        CYGWIN*|MINGW*|MSYS*|Windows*)
+            echo "windows"
+            ;;
+        *)
+            echo "unknown"
+            ;;
+    esac
+}
+
+# Function to create .env file
+create_env_file() {
+    if [ "$(detect_os)" = "windows" ]; then
+        # Windows-style file creation
+        echo "VITE_API_URL=http://localhost:8080/v1" > .env
+        echo "VITE_ENVIRONMENT=self-hosted" >> .env
+    else
+        # Unix-style file creation
+        cat > .env << EOL
+VITE_API_URL=http://localhost:8080/v1
+VITE_ENVIRONMENT=self-hosted
+EOL
+    fi
+    echo "Created .env file with required configuration"
+}
+
+# Function to check Docker installation
+check_docker() {
+    if [ "$(detect_os)" = "windows" ]; then
+        if ! command -v docker.exe >/dev/null 2>&1; then
+            echo "Docker is not installed. Please install Docker Desktop for Windows first."
+            exit 1
+        fi
+    else
+        if ! command -v docker >/dev/null 2>&1; then
+            echo "Docker is not installed. Please install Docker first."
+            exit 1
+        fi
+    fi
+}
+
+# Function to build and run Docker
+docker_build_and_run() {
+    echo "Building Docker image..."
+    docker build -t flexprice-front .
+
+    echo "Running Docker container..."
+    docker run -d -p 3000:3000 flexprice-front
+}
+
+# Main execution
+echo "Starting FlexPrice Frontend Setup..."
+
+# Detect OS and show message
+OS_TYPE=$(detect_os)
+echo "Detected operating system: $OS_TYPE"
+
+# Create .env file
+create_env_file
+
+# Check Docker installation
+check_docker
+
+# Build and run Docker
+docker_build_and_run
+
+echo "Setup completed! The application should be running at http://localhost:3000" 

@@ -1,0 +1,252 @@
+import { AddButton, Page, ActionButton, Chip, Tooltip } from '@/components/atoms';
+import { ApiDocsContent, AddonDrawer } from '@/components/molecules';
+import { useCurrentUserPermissions } from '@/hooks/useCurrentUserPermissions';
+import { ColumnData } from '@/components/molecules/Table';
+import { QueryableDataArea } from '@/components/organisms';
+import Addon from '@/models/Addon';
+import { buildGuides } from '@/constants/guides';
+import { API_DOCS_TAGS } from '@/constants/apiDocsTags';
+import { useState, useMemo, useCallback } from 'react';
+import AddonApi from '@/api/AddonApi';
+import {
+	FilterField,
+	FilterFieldType,
+	DEFAULT_OPERATORS_PER_DATA_TYPE,
+	DataType,
+	FilterOperator,
+	SortOption,
+	SortDirection,
+	FilterCondition,
+} from '@/types/common/QueryBuilder';
+import { ENTITY_STATUS } from '@/models';
+import { useNavigate } from 'react-router';
+import { RouteNames } from '@/core/routes/Routes';
+import formatDate from '@/utils/common/format_date';
+import { useTranslation } from 'react-i18next';
+
+const initialFilters: FilterCondition[] = [
+	{
+		field: 'name',
+		operator: FilterOperator.CONTAINS,
+		valueString: '',
+		dataType: DataType.STRING,
+		id: 'initial-name',
+	},
+	{
+		field: 'status',
+		operator: FilterOperator.IN,
+		valueArray: [ENTITY_STATUS.PUBLISHED],
+		dataType: DataType.ARRAY,
+		id: 'initial-status',
+	},
+];
+
+const AddonsPage = () => {
+	const { t } = useTranslation('catalog');
+	const { t: tGuide } = useTranslation('guides');
+	const guides = useMemo(() => buildGuides(tGuide), [tGuide]);
+	const [activeAddon, setActiveAddon] = useState<Addon | null>(null);
+	const [addonDrawerOpen, setAddonDrawerOpen] = useState(false);
+	const navigate = useNavigate();
+	const { can, isLoading: permissionsLoading } = useCurrentUserPermissions();
+	// Optimistic during the loading window rather than gated behind a page-level Loader — the write
+	// controls would otherwise briefly evaluate against an empty role catalog and flash a false
+	// "denied" state for authorized users; can() settles to the real value once roles arrive.
+	const canWriteAddon = permissionsLoading || can('addon', 'write');
+
+	const handleOnAdd = useCallback(() => {
+		setActiveAddon(null);
+		setAddonDrawerOpen(true);
+	}, []);
+
+	const handleEdit = useCallback((addon: Addon) => {
+		setActiveAddon(addon);
+		setAddonDrawerOpen(true);
+	}, []);
+
+	const sortingOptions: SortOption[] = useMemo(
+		() => [
+			{
+				field: 'name',
+				label: t('addons.listPage.sortLabels.name'),
+				direction: SortDirection.ASC,
+			},
+			{
+				field: 'created_at',
+				label: t('addons.listPage.sortLabels.createdAt'),
+				direction: SortDirection.DESC,
+			},
+			{
+				field: 'updated_at',
+				label: t('addons.listPage.sortLabels.updatedAt'),
+				direction: SortDirection.DESC,
+			},
+		],
+		[t],
+	);
+
+	const filterOptions: FilterField[] = useMemo(
+		() => [
+			{
+				field: 'name',
+				label: t('addons.listPage.filterLabels.name'),
+				fieldType: FilterFieldType.INPUT,
+				operators: DEFAULT_OPERATORS_PER_DATA_TYPE[DataType.STRING],
+				dataType: DataType.STRING,
+			},
+			{
+				field: 'lookup_key',
+				label: t('addons.listPage.filterLabels.lookupKey'),
+				fieldType: FilterFieldType.INPUT,
+				operators: DEFAULT_OPERATORS_PER_DATA_TYPE[DataType.STRING],
+				dataType: DataType.STRING,
+			},
+			{
+				field: 'created_at',
+				label: t('addons.listPage.filterLabels.createdAt'),
+				fieldType: FilterFieldType.DATEPICKER,
+				operators: DEFAULT_OPERATORS_PER_DATA_TYPE[DataType.DATE],
+				dataType: DataType.DATE,
+			},
+			{
+				field: 'status',
+				label: t('addons.listPage.filterLabels.status'),
+				fieldType: FilterFieldType.MULTI_SELECT,
+				operators: [FilterOperator.IN, FilterOperator.NOT_IN],
+				dataType: DataType.ARRAY,
+				options: [
+					{ value: ENTITY_STATUS.PUBLISHED, label: t('addons.listPage.filterStatus.active') },
+					{ value: ENTITY_STATUS.ARCHIVED, label: t('addons.listPage.filterStatus.inactive') },
+				],
+			},
+		],
+		[t],
+	);
+
+	const initialSorts: SortOption[] = useMemo(
+		() => [
+			{
+				field: 'updated_at',
+				label: t('addons.listPage.sortLabels.updatedAt'),
+				direction: SortDirection.DESC,
+			},
+		],
+		[t],
+	);
+
+	const columns: ColumnData<Addon>[] = useMemo(
+		() => [
+			{
+				fieldName: 'name',
+				title: t('addons.listPage.columns.addonName'),
+			},
+			{
+				fieldName: 'lookup_key',
+				title: t('addons.listPage.columns.lookupKey'),
+			},
+			{
+				title: t('addons.listPage.columns.status'),
+				render: (row) => {
+					const isActive = row?.status === ENTITY_STATUS.PUBLISHED;
+					const label = isActive ? t('addons.listPage.filterStatus.active') : t('addons.listPage.filterStatus.inactive');
+					return <Chip variant={isActive ? 'success' : 'default'} label={label} />;
+				},
+			},
+			{
+				title: t('addons.listPage.columns.updatedAt'),
+				render: (row) => {
+					return formatDate(row?.updated_at);
+				},
+			},
+			{
+				fieldVariant: 'interactive',
+				render(row) {
+					return (
+						<ActionButton
+							id={row?.id}
+							copyId={{ entityType: 'Addon' }}
+							deleteMutationFn={async () => {
+								return await AddonApi.Delete(row?.id);
+							}}
+							refetchQueryKey='fetchAddons'
+							entityName={row?.name}
+							edit={{
+								enabled: false,
+								onClick: () => handleEdit(row),
+							}}
+							archive={{
+								enabled: row?.status !== ENTITY_STATUS.ARCHIVED,
+								disabled: !canWriteAddon,
+								disabledReason: canWriteAddon ? undefined : t('addons.writeDeniedTooltip'),
+							}}
+						/>
+					);
+				},
+			},
+		],
+		[t, handleEdit, canWriteAddon],
+	);
+
+	return (
+		<Page
+			heading={t('addons.listPage.title')}
+			headingCTA={
+				canWriteAddon ? (
+					<AddButton onClick={handleOnAdd} />
+				) : (
+					<Tooltip content={t('addons.writeDeniedTooltip')}>
+						<span tabIndex={0} className='inline-block'>
+							<AddButton disabled onClick={handleOnAdd} />
+						</span>
+					</Tooltip>
+				)
+			}>
+			<AddonDrawer data={activeAddon} open={addonDrawerOpen} onOpenChange={setAddonDrawerOpen} refetchQueryKeys={['fetchAddons']} />
+			<ApiDocsContent tags={API_DOCS_TAGS.Addons} />
+			<div className='space-y-6'>
+				<QueryableDataArea<Addon>
+					queryConfig={{
+						filterOptions,
+						sortOptions: sortingOptions,
+						initialFilters,
+						initialSorts,
+						debounceTime: 500,
+					}}
+					dataConfig={{
+						queryKey: 'fetchAddons',
+						fetchFn: async (params) => AddonApi.ListByFilter(params),
+						probeFetchFn: async (params) =>
+							AddonApi.ListByFilter({
+								...params,
+								limit: 1,
+								offset: 0,
+								filters: [],
+								sort: [],
+							}),
+					}}
+					tableConfig={{
+						columns,
+						onRowClick: (row) => {
+							navigate(RouteNames.addonDetails + `/${row?.id}`);
+						},
+						showEmptyRow: true,
+					}}
+					paginationConfig={{
+						unit: t('addons.listPage.paginationUnit'),
+					}}
+					emptyStateConfig={{
+						heading: t('addons.listPage.emptyState.heading'),
+						description: t('addons.listPage.emptyState.description'),
+						buttonLabel: t('addons.listPage.emptyState.createButton'),
+						buttonAction: handleOnAdd,
+						buttonDisabled: !canWriteAddon,
+						buttonDisabledReason: canWriteAddon ? undefined : t('addons.writeDeniedTooltip'),
+						tags: API_DOCS_TAGS.Addons,
+						tutorials: guides.addons.tutorials,
+					}}
+				/>
+			</div>
+		</Page>
+	);
+};
+export default AddonsPage;
