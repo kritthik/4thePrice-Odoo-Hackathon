@@ -1,4 +1,4 @@
-# 4thePrice
+# 4 The Price
 
 **Flexible, developer-first billing infrastructure for modern SaaS and
 AI-native products.**
